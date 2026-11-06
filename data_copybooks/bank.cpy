@@ -1,0 +1,7 @@
+           05 REG_NR PIC X(4) VALUE SPACES.
+           05 BANK_NAVN PIC X(30) VALUE SPACES.
+           05 BANK_ADRESSE PIC X(50) VALUE SPACES.
+           05 KONTAKT.
+           10 TELEFON PIC X(15) VALUE SPACES.
+           10 EMAIL PIC X(40) VALUE SPACES.
+           
