@@ -8,7 +8,7 @@
                  ORGANIZATION IS LINE SEQUENTIAL.
 
                  SELECT INPUT_TRANSAKTION ASSIGN
-                  TO "TransaktionerMini.txt"
+                  TO "Transaktioner.txt"
                  ORGANIZATION IS LINE SEQUENTIAL.
 
                  SELECT OUTPUT_KONTOUDSKRIFT
@@ -28,7 +28,7 @@
 
                   FD OUTPUT_KONTOUDSKRIFT.
                   01 KONTOUDSKRIFT.
-                  05 NY_LINJE PIC X(110)   VALUE SPACES.
+                  05 NY_LINJE PIC X(150)   VALUE SPACES.
        
        WORKING-STORAGE SECTION.
       * Account ID manipulation
@@ -322,14 +322,10 @@
       * Wipe foreign currency variable.
        MOVE SPACES TO VALUTA_OTHER
        IF VALUTA OF TRANSAKTION = "DKK"
-       DISPLAY "yay"
       * Convert to number
               MOVE BELØB_RAW TO BELØB_DECIMAL
       * Format for printing.
             MOVE BELØB_DECIMAL TO BELØB_FORMAT_ONE
-            DISPLAY BELØB_RAW
-            DISPLAY BELØB_DECIMAL
-            DISPLAY BELØB_FORMAT_ONE
       * If not DKK
        ELSE
       * CONVERT TO DKK:
@@ -343,7 +339,6 @@
        END-IF
       * If foreign currency = USD
        IF VALUTA OF TRANSAKTION = "USD"
-       DISPLAY "nay"
        COMPUTE BELØB_DECIMAL = BELØB_DECIMAL * 6.8
        END-IF
 
