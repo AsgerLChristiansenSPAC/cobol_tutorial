@@ -48,18 +48,24 @@
                   01   EOF_BANK
                   PIC X VALUE "N".
                   88 EOF_BANK_REACHED VALUE "Y".
-                  
+      
+      * Arithmetic representation of balance:
+                  01 BELØB_DECIMAL PIC S9(11)V99.
+      * Output variables
+                  01 VALUTA_DKK PIC X(3) VALUE "DKK".
+
       * Data manipulation variables.
                   01 IDX        PIC 9(3) VALUE ZEROES.
                   01 IDX_OUT    PIC 9(3) VALUE ZEROES.
                   01 IDX_BANK   PIC 9(3) VALUE ZEROS.
-              
+                  
                   01 CURRENT_CHAR PIC X(1) VALUE SPACES.
                   01 PREVIOUS_CHAR PIC X(1) VALUE SPACES.
 
                   01 KONTOUDSKRIFT_CLEAN PIC X(100) VALUE SPACES.
 
-                  01 BELØB_TO_DKK PIC 9(15)V99 VALUE ZEROES.
+                  01 BELØB_DECIMAL_DKK PIC S9(11)V99 VALUE ZEROES.
+                  01 BELØB_DKK_FORMAT PIC ZZZZZZZZZ9.99 VALUE SPACES.
 
        PROCEDURE DIVISION.
        OPEN INPUT INPUT_BANK.
@@ -74,41 +80,41 @@
        AT END
        SET EOF_TRANSAKTION_REACHED TO TRUE
        NOT AT END
-      * DISPLAY "UPCOMING TRANSAKTION"
-      * DISPLAY TRANSAKTION
       * Update current account
        MOVE SPACES TO PREVIOUS_KONTO_ID
        MOVE CURRENT_KONTO_ID TO PREVIOUS_KONTO_ID
        MOVE SPACES TO CURRENT_KONTO_ID
-      * DISPLAY "Upcoming Konto-ID"
-      * DISPLAY KONTO_ID OF TRANSAKTION
        MOVE KONTO_ID OF TRANSAKTION TO CURRENT_KONTO_ID
-      * DISPLAY "Current Konto-ID"
-      * DISPLAY CURRENT_KONTO_ID
-      * DISPLAY "Previous Konto-ID"
       
       * DISPLAY PREVIOUS_KONTO_ID
+
       * Is this a new account?
+
        IF CURRENT_KONTO_ID EQUAL PREVIOUS_KONTO_ID
-       PERFORM WRITE_TRANSAKTION
+      * If same account
+              PERFORM WRITE_TRANSAKTION
+              PERFORM CONVERT_VALUTA
+
+
+
+
+
       * Same account as last transaction.
        ELSE
-       PERFORM NEW_LINE
-      * Write top string
-       PERFORM WRITE_FILE_TOP
-      * Write name and adress of customer.
-       PERFORM WRITE_KUNDE_INFO
-       PERFORM NEW_LINE
-      * Write bank info.
-       DISPLAY "Yay!"
-       PERFORM WRITE_BANK_INFO
-       DISPLAY "Nay!"
-       PERFORM NEW_LINE
-      * Write account nr.
-       PERFORM WRITE_KONTO_ID
-       PERFORM NEW_LINE
-       PERFORM WRITE_TRANSAKTION_HEADER
-
+           PERFORM NEW_LINE
+      *     Write top string
+           PERFORM WRITE_FILE_TOP
+      *     Write name and adress of customer.
+           PERFORM WRITE_KUNDE_INFO
+           PERFORM NEW_LINE
+      *     Write bank info.
+           PERFORM WRITE_BANK_INFO
+           PERFORM NEW_LINE
+      *     Write account nr.
+           PERFORM WRITE_KONTO_ID
+           PERFORM NEW_LINE
+           PERFORM WRITE_TRANSAKTION_HEADER
+    
        END-READ
        END-PERFORM.
        
@@ -126,40 +132,22 @@
        PERFORM VARYING IDX_BANK FROM 1 BY 1 
        UNTIL IDX_BANK > BANK_ARRAY_SIZE
        IF REG_NR OF TRANSAKTION EQUAL REG_NR OF BANK_ARRAY(IDX_BANK)
-       DISPLAY "Before:"
-       DISPLAY IDX
-       DISPLAY BANK_ARRAY(IDX_BANK)
-       DISPLAY REG_NR OF BANK_ARRAY(IDX_BANK)
-       DISPLAY BANK_NAVN OF BANK_ARRAY(IDX_BANK)
-       DISPLAY BANK_ADRESSE OF BANK_ARRAY(IDX_BANK)
       * Registreringsnummer
        MOVE SPACES TO KONTOUDSKRIFT
        STRING "Registreringsnummer: " DELIMITED BY SIZE 
        REG_NR OF BANK_ARRAY(IDX_BANK) DELIMITED BY SIZE 
        INTO KONTOUDSKRIFT
-       DISPLAY "After first string:"
-       DISPLAY REG_NR OF BANK_ARRAY(IDX_BANK)
-       DISPLAY BANK_NAVN OF BANK_ARRAY(IDX_BANK)
-       DISPLAY BANK_ADRESSE OF BANK_ARRAY(IDX_BANK)
        PERFORM CLEAN_WRITE
-       DISPLAY "After first cleanwrite:"
-       DISPLAY REG_NR OF BANK_ARRAY(IDX_BANK)
-       DISPLAY BANK_ARRAY(IDX_BANK)
-       DISPLAY BANK_NAVN OF BANK_ARRAY(IDX_BANK)
-       DISPLAY BANK_ADRESSE OF BANK_ARRAY(IDX_BANK)
 
       * Bank-navn
-       DISPLAY BANK_NAVN OF BANK_ARRAY(IDX_BANK)
        STRING "Bank: " DELIMITED BY SIZE 
        BANK_ADRESSE OF BANK_ARRAY(IDX_BANK) DELIMITED BY SIZE 
        INTO KONTOUDSKRIFT
-       DISPLAY KONTOUDSKRIFT
        PERFORM CLEAN_WRITE
       * Bank-adresse
        STRING "Bankadresse: " DELIMITED BY SIZE 
        BANK_ADRESSE OF BANK_ARRAY(IDX_BANK) DELIMITED BY SIZE 
        INTO KONTOUDSKRIFT
-       DISPLAY KONTOUDSKRIFT
        PERFORM CLEAN_WRITE
       * Telefon
        STRING "Telefon: " DELIMITED BY SIZE 
@@ -189,7 +177,6 @@
            AT END
                SET EOF_BANK_REACHED TO TRUE
            NOT AT END
-              DISPLAY IDX_BANK
               ADD 1 TO IDX_BANK
               MOVE BANK TO BANK_ARRAY(IDX_BANK)
               MOVE SPACES TO BANK
@@ -278,7 +265,7 @@
        MOVE SPACES TO KONTOUDSKRIFT
        STRING TIDSPUNKT OF TRANSAKTION DELIMITED BY SIZE
        TRANSAKTIONSTYPE OF TRANSAKTION DELIMITED BY SIZE
-       BELØB OF TRANSAKTION  DELIMITED BY SIZE
+       BELØB_RAW OF TRANSAKTION  DELIMITED BY SIZE
        VALUTA OF TRANSAKTION  DELIMITED BY SIZE
        BUTIK OF TRANSAKTION DELIMITED BY SIZE
        INTO KONTOUDSKRIFT
@@ -295,9 +282,17 @@
 
 
        CONVERT_VALUTA.
-       MOVE SPACES TO BELØB_TO_DKK.
+       MOVE Zeros TO BELØB_DECIMAL_DKK
+       MOVE ZEROS TO BELØB_DECIMAL
+       MOVE ZEROS TO BELØB_DKK_FORMAT
        IF VALUTA OF TRANSAKTION = "EUR"
-        MOVE BELØB OF TRANSAKTION INTO BELØB_TO_DKK.
-        MOVE BELØB_TO_DKK*7.5 TO BELØB_TO_DKK.
+       MOVE BELØB_RAW TO BELØB_DECIMAL
+       COMPUTE BELØB_DECIMAL_DKK = BELØB_DECIMAL * 7.5
+       DISPLAY "Fremmed valuta:"
+       DISPLAY BELØB_RAW
+       DISPLAY BELØB_DECIMAL
+       DISPLAY "Konverteret til DKK:"
+       MOVE BELØB_DECIMAL_DKK TO BELØB_DKK_FORMAT
+       DISPLAY BELØB_DKK_FORMAT
        END-IF
        EXIT.
