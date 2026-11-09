@@ -28,7 +28,7 @@
 
                   FD OUTPUT_KONTOUDSKRIFT.
                   01 KONTOUDSKRIFT.
-                  05 NY_LINJE PIC X(100)   VALUE SPACES.
+                  05 NY_LINJE PIC X(110)   VALUE SPACES.
        
        WORKING-STORAGE SECTION.
       * Account ID manipulation
@@ -52,7 +52,10 @@
       * Arithmetic representation of balance:
                   01 BELØB_DECIMAL PIC S9(11)V99.
       * Output variables
+                  01 BELØB_FORMAT_ONE PIC +ZZZZZZZZZ9.99 VALUE SPACES.
+                  01 BELØB_FORMAT_TWO PIC +ZZZZZZZZZ9.99 VALUE SPACES.
                   01 VALUTA_DKK PIC X(3) VALUE "DKK".
+                  01 VALUTA_OTHER PIC X(3) VALUE SPACES.
 
       * Data manipulation variables.
                   01 IDX        PIC 9(3) VALUE ZEROES.
@@ -65,7 +68,6 @@
                   01 KONTOUDSKRIFT_CLEAN PIC X(100) VALUE SPACES.
 
                   01 BELØB_DECIMAL_DKK PIC S9(11)V99 VALUE ZEROES.
-                  01 BELØB_DKK_FORMAT PIC ZZZZZZZZZ9.99 VALUE SPACES.
 
        PROCEDURE DIVISION.
        OPEN INPUT INPUT_BANK.
@@ -91,9 +93,10 @@
       * Is this a new account?
 
        IF CURRENT_KONTO_ID EQUAL PREVIOUS_KONTO_ID
+      * If foreign currency:
+              PERFORM CONVERT_VALUTA
       * If same account
               PERFORM WRITE_TRANSAKTION
-              PERFORM CONVERT_VALUTA
 
 
 
@@ -114,6 +117,10 @@
            PERFORM WRITE_KONTO_ID
            PERFORM NEW_LINE
            PERFORM WRITE_TRANSAKTION_HEADER
+      * If foreign currency:
+              PERFORM CONVERT_VALUTA
+      * If same account
+              PERFORM WRITE_TRANSAKTION
     
        END-READ
        END-PERFORM.
@@ -265,8 +272,10 @@
        MOVE SPACES TO KONTOUDSKRIFT
        STRING TIDSPUNKT OF TRANSAKTION DELIMITED BY SIZE
        TRANSAKTIONSTYPE OF TRANSAKTION DELIMITED BY SIZE
-       BELØB_RAW OF TRANSAKTION  DELIMITED BY SIZE
-       VALUTA OF TRANSAKTION  DELIMITED BY SIZE
+       BELØB_FORMAT_ONE  DELIMITED BY SIZE
+       VALUTA_DKK DELIMITED BY SIZE
+       BELØB_FORMAT_TWO DELIMITED BY SIZE
+       VALUTA_OTHER  DELIMITED BY SIZE
        BUTIK OF TRANSAKTION DELIMITED BY SIZE
        INTO KONTOUDSKRIFT
        PERFORM CLEAN_WRITE
@@ -282,17 +291,47 @@
 
 
        CONVERT_VALUTA.
+      * Wipe arithmetic variables
        MOVE Zeros TO BELØB_DECIMAL_DKK
        MOVE ZEROS TO BELØB_DECIMAL
-       MOVE ZEROS TO BELØB_DKK_FORMAT
-       IF VALUTA OF TRANSAKTION = "EUR"
+      * Wipe number output variables.
+       MOVE ZEROS TO BELØB_FORMAT_ONE
+       MOVE ZEROS TO BELØB_FORMAT_TWO
+      * Wipe foreign currency variable.
+       MOVE SPACES TO VALUTA_OTHER
+       IF VALUTA OF TRANSAKTION = "DKK"
+       DISPLAY "yay"
+      * Convert to number
+              MOVE BELØB_RAW TO BELØB_DECIMAL
+      * Format for printing.
+            MOVE BELØB_DECIMAL TO BELØB_FORMAT_ONE
+            DISPLAY BELØB_RAW
+            DISPLAY BELØB_DECIMAL
+            DISPLAY BELØB_FORMAT_ONE
+      * If not DKK
+       ELSE
+      * CONVERT TO DKK:
+      * Move to arithmetic data type.
        MOVE BELØB_RAW TO BELØB_DECIMAL
-       COMPUTE BELØB_DECIMAL_DKK = BELØB_DECIMAL * 7.5
-       DISPLAY "Fremmed valuta:"
-       DISPLAY BELØB_RAW
-       DISPLAY BELØB_DECIMAL
-       DISPLAY "Konverteret til DKK:"
-       MOVE BELØB_DECIMAL_DKK TO BELØB_DKK_FORMAT
-       DISPLAY BELØB_DKK_FORMAT
+       
+      * If foreign currency = EUR
+       IF VALUTA OF TRANSAKTION = "EUR"
+      * Perform conversion.
+       COMPUTE BELØB_DECIMAL = BELØB_DECIMAL * 7.5
+       END-IF
+      * If foreign currency = USD
+       IF VALUTA OF TRANSAKTION = "USD"
+       DISPLAY "nay"
+       COMPUTE BELØB_DECIMAL = BELØB_DECIMAL * 6.8
+       END-IF
+
+      * Now what conversion is achieved, we want to move it to the
+      * FIRST column (the DKK column).
+       MOVE BELØB_DECIMAL TO BELØB_FORMAT_ONE
+
+      * Move relevant data into FOREIGN output values.
+       MOVE VALUTA OF TRANSAKTION TO VALUTA_OTHER
+       MOVE BELØB_RAW OF TRANSAKTION TO BELØB_FORMAT_TWO
+       
        END-IF
        EXIT.
