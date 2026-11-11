@@ -163,7 +163,7 @@
 
            END-READ
            end-perform.
-           
+
        close input-month.
 
        display "Reading months done!"
@@ -179,6 +179,17 @@
        AT END
            Set eof-transaction-reached to True
        NOT AT END
+       *> FIRST AND FOREMOST, convert currencies.
+           
+           Perform convert-transaction-currency
+
+           *> Months don't care about new accounts.
+           *> Match month.
+           *> Add to total expenses and total income.
+           
+
+           *> Neither do shops care about new accounts.
+           *> Match shop. Add 1 to that shops transactions.
 
        
               *> Update current account
@@ -425,7 +436,6 @@
            
            move customer-name of transaction to
            customer-name of account-array(idx-account)
-           Perform convert-transaction-currency
               *> Once currency conversion is done, 
               *> add ws-amount-decimal to
               *> current account in the array.
@@ -456,8 +466,20 @@
        EXIT.
 
 
+       
+       update-shop-totals.
+           *> for every transaction
+           move 1 to idx-shop.
+           perform varying idx-shop from 1 by 1 
+           until idx-shop > SHOP-ARRAY-SIZE
+           
+               if shop-name of transaction equal shop-name of
+               shop-array(idx-shop)
+               display "unifinished"
+               end-if
 
-
+           end-perform.
+       exit.
 
               *> REMAINING to-DO:
 
