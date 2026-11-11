@@ -43,7 +43,8 @@
 
        
        Working-Storage Section.
-           
+           *> Total transactions
+           01 ws-total-transactions pic 9(5) value zeros.
            *> Integer division
               *> Account ID manipulation
            01 current-account-id pic x(15) value spaces.
@@ -97,6 +98,7 @@
            01 ws-month-nr pic x(2) value spaces.
            01 ws-day pic x(2) value spaces.
            01 ws-time pic x(32) value spaces.
+           01 delimiter-char pic x value '-'.
 
            *> Arithmetic representation of transaction:
            01 ws-amount-decimal pic s9(11)v99.
@@ -121,9 +123,10 @@
                   01 previous-char pic X(1) value spaces.
 
 
-
        PROCEDURE DIVISION.
-       
+     
+
+           
        open input input-shop.
        display "Reading shops..."
        perform until eof-shop-reached
@@ -182,6 +185,9 @@
        *> FIRST AND FOREMOST, convert currencies.
            
            Perform convert-transaction-currency
+           perform update-shop-totals
+           perform update-month-totals
+           add 1 to ws-total-transactions
 
            *> Months don't care about new accounts.
            *> Match month.
@@ -235,6 +241,22 @@
            close input-transaction
        display "reading transactions done, beginning ranking..."
        perform update-account-ranking.
+       move 1 to idx-shop.
+       
+       
+       perform varying idx-shop from 1 by 1 until idx-shop greater than
+       SHOP-ARRAY-SIZE
+           display shop-array(idx-shop)
+       end-perform.
+       display ws-total-transactions.
+
+        move 1 to idx-month.
+       perform varying idx-month from 1 by 1 until idx-month
+       greater than        month-ARRAY-SIZE
+           display month-acronym of month-array(idx-month)
+           display month-income of month-array(idx-month)
+           display month-expenses of month-array(idx-month)
+       end-perform.
        STOP RUN.
               *> PARAGRAPHS to IMPORT:
        
@@ -469,20 +491,48 @@
        
        update-shop-totals.
            *> for every transaction
+           *> After currency conversion
            move 1 to idx-shop.
            perform varying idx-shop from 1 by 1 
            until idx-shop > SHOP-ARRAY-SIZE
-           
+               
                if shop-name of transaction equal shop-name of
                shop-array(idx-shop)
-               display "unifinished"
+               add 1 to transaction-count of shop-array(idx-shop)
                end-if
 
            end-perform.
        exit.
+       
+       update-month-totals.
+           move 1 to idx-month
+           perform varying idx-month from 1 by 1
+           until idx-month > month-array-size
+           display month-nr of month-array(idx-month)
+           *> Extract datetime.
+               move datetime of transaction to ws-datetime
+                
+                 unstring ws-datetime delimited by delimiter-char
+               into ws-year ws-month-nr ws-day ws-time
+           END-UNSTRING
+
+               if ws-month-nr equal month-nr of
+               month-array(idx-month)
+               
+                   if ws-amount-decimal > 0
+                   add ws-amount-decimal
+                   to month-income of month-array(idx-month)
+                   end-if
+
+                   if ws-amount-decimal < 0
+                   add ws-amount-decimal
+                   to month-expenses of month-array(idx-month)
+
+               end-if
 
               *> REMAINING to-DO:
-
+          end-perform
+       exit.
               *> TASK PART 2: PRINT PER MONTH
               *> We need an array of months. It doesn't seem like we have
               *> data for multiple years here.
