@@ -37,9 +37,11 @@
                   88 eof-transaction-reached value "Y".
       
            *> Arrays
+          
            01 idx-account    pic 9(3) value zeroes.
            
-           01 account-array occurs 20 times.
+           78 account-array-size value 3.
+           01 account-array occurs account-array-size times.
            05 account-id pic x(15) value spaces.
            05 customer-name pic x(30) value spaces.
            05 account-total pic s9(11)v99.
@@ -98,7 +100,7 @@
               *> Is this a new account?
            IF current-account-id EQUAL previous-account-id
                perform update-account-row
-               perform update-account-ranking
+               
               
               *> Do anything else that needs doing regardless of accounts.
            else
@@ -109,8 +111,8 @@
                account-id of account-array(idx-account)
                move 50000 to account-total of account-array(idx-account)
                perform update-account-row
-               perform update-account-ranking
-
+               
+           
        END-READ
        END-PERFORM.
               *> What can be reused?
@@ -130,9 +132,10 @@
               *> And then, as proof of concept, we need to DISPLAY the three
               *> highest TOTALs.
            close input-transaction
+       perform update-account-ranking.
        STOP RUN.
               *> PARAGRAPHS to IMPORT:
-
+       
 
 
        convert-transaction-currency.
@@ -183,27 +186,26 @@
        
 
        update-account-ranking.
-           *> Compare the balance of current account in account-array
-           *> with the highest ranking accounts, sequentially.
+           move 1 to idx-account.
+           perform varying idx-account from 1 by 1 until 
+           idx-account > account-array-size
+           display idx-account
+           display account-id of account-array(idx-account)
+           display account-total of account-array(idx-account)
            
-           *> If higher than first place
+           display idx-account
+           *> If (idx) account has higher total than first place
            if account-total of account-array(idx-account)
            greater than
            account-total of ranking-array(1)
            
            *> Move second place to third. Overwrite third.
-           move account-id of ranking-array(2)
-           to account-id of ranking-array(3)
-
-           move account-total of ranking-array(2)
-           to account-total of ranking-array(3)
+           move 2 to idx-ranking
+           perform cascade-ranks-down
 
            *> Move first place to second. Overwrite second.
-           move account-id of ranking-array(1)
-           to account-id of ranking-array(2)
-
-           move account-total of ranking-array(1)
-           to account-total of ranking-array(2)
+           move 1 to idx-ranking
+           perform cascade-ranks-down
 
            
            *> Move current account to first place.
@@ -219,12 +221,9 @@
                greater than
                account-total of ranking-array(idx-ranking)
 
-                  *> Move second place to third. Overwrite third.
-                  move account-id of ranking-array(2)
-                  to account-id of ranking-array(3)
-                  
-                  move account-total of ranking-array(2)
-                  to account-total of ranking-array(3)
+               *> Move second place to third. Overwrite third.
+               move 2 to idx-ranking
+               perform cascade-ranks-down
 
                   *> Move current account to second place.
                   move account-id of account-array(idx-account)
@@ -246,15 +245,79 @@
 
                     move account-total of account-array(idx-account)
                    to account-total of ranking-array(3)
+                   else
+                   *> If not greater than any rank, see if there are
+                   *> empty ranks to fill.        
+                      perform replace-empty-rank
                    end-if
                end-if
            end-if
 
+           end-perform
            display "Current ranking:"
-           display "First: " ranking-array(1)
-           display "Second: " ranking-array(2)
-           display "Third: " ranking-array(3)
+           display "First: " account-id of ranking-array(1)
+            account-total of ranking-array(1)
+           display "Second: " account-id of ranking-array(2)
+            account-total of ranking-array(2)
+           display "Third: " account-id of ranking-array(3)
+            account-total of ranking-array(3)
+       exit.
+       
+       
+       replace-empty-rank.
+           
+           move 1 to idx-ranking
+           *> Replace empty slot if second slot empty.
+           display "first place check"
+           if account-id of ranking-array(idx-ranking) equal spaces
+           move account-id of account-array(idx-account)
+           to account-id of ranking-array(idx-ranking)
+           move account-total of account-array(idx-account)
+           to account-total of ranking-array(idx-ranking)
+           display "empty rank at position " idx-ranking
+           else
+               display "second place check"
+               *> Replace empty slot if second slot empty.
+               move 2 to idx-ranking
+               if account-id of ranking-array(idx-ranking) equal spaces
+               
+               move account-id of account-array(idx-account)
+               to account-id of ranking-array(idx-ranking)
+    
+               move account-total of account-array(idx-account)
+               to account-total of ranking-array(idx-ranking)
+               display "empty rank at position " idx-ranking
+               else
+                   *> Replace empty slot if third slot empty.
+                   display "third place check"
+                   move 3 to idx-ranking
+                   if account-id of ranking-array(idx-ranking)
+                   equal spaces
+                   
+                   move account-id of account-array(idx-account)
+                   to account-id of ranking-array(idx-ranking)
+        
+                   move account-total of account-array(idx-account)
+                   to account-total of ranking-array(idx-ranking)
+                   display "empty rank at position " idx-ranking
+                   
+                   end-if
+           end-if
+       end-if
+       exit.
 
+
+       cascade-ranks-down.
+           if idx-ranking < 3
+           *> Move currently indexed rank one down.
+                  move account-id of ranking-array(idx-ranking)
+                  to account-id of ranking-array(idx-ranking + 1)
+                  
+                  move account-total of ranking-array(idx-ranking)
+                  to account-total of ranking-array(idx-ranking + 1)
+
+           end-if
+           
        exit.
 
        update-account-row.
@@ -321,3 +384,4 @@
 
               *> top 3 customer IDs (technically part 1)
               *> top 5 shops.
+
