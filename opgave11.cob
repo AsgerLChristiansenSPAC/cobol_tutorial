@@ -11,6 +11,14 @@
                  "transaktioner.txt"
                  Organization is line sequential.
 
+                 select input-shop assign to
+                 "shops.txt"
+                 Organization is line sequential.
+
+                 select input-month assign to
+                 "months.txt"
+                 Organization is line sequential.
+
        Data division.
       
            File Section.
@@ -22,6 +30,16 @@
                   01 transaction.
                   Copy "data_copybooks/transaction.cpy".
 
+                  fd input-shop.
+                  01 shop.
+                  copy "data_copybooks/shop.cpy".
+
+
+                  fd input-month.
+                  01 month.
+                  copy "data_copybooks/month.cpy".
+
+
        
        Working-Storage Section.
            
@@ -31,6 +49,13 @@
            01 previous-account-id pic x(15) value spaces.
 
               *> End of File flags
+                  01   eof-shop
+                  pic x value "N".
+                  88 eof-shop-reached value "Y".
+
+                  01 eof-month
+                  pic x value "N".
+                  88 eof-month-reached value "Y".
 
               *> transactioner.txt
                   01   eof-transaction
@@ -40,18 +65,37 @@
            *> Arrays
           
            01 idx-account    pic 9(6) value zeroes.
-           
+           *> Account-array
            78 account-array-size value 10000.
            01 account-array occurs account-array-size times.
            05 account-id pic x(15) value spaces.
            05 customer-name pic x(30) value spaces.
            05 account-total pic s9(11)v99.
            05 account-total-format pic +zzzzzzzzz9.99 value zeros.
+           *> shop-array
+           
+           01 idx-shop pic 9(2) value 0.
+           78 shop-array-size value 13.
+           01 shop-array occurs SHOP-ARRAY-SIZE times.
+           copy "data_copybooks/shop.cpy".
+
+           *> Month-array
+           01 idx-month pic 9(2) value 0.
+           78 MONTH-ARRAY-SIZE value 12.
+           01 month-array occurs MONTH-ARRAY-SIZE times.
+           copy "data_copybooks/month.cpy".
            
            01 idx-ranking pic 9(1) value 0.
            01 ranking-array occurs 3 times.
                copy "data_copybooks/account_ranking.cpy".
 
+           
+           *> Datetime manipulation
+           01 ws-datetime pic x(40) value spaces.
+           01 ws-year pic x(4) value spaces.
+           01 ws-month-nr pic x(2) value spaces.
+           01 ws-day pic x(2) value spaces.
+           01 ws-time pic x(32) value spaces.
 
            *> Arithmetic representation of transaction:
            01 ws-amount-decimal pic s9(11)v99.
@@ -83,6 +127,17 @@
        Open input input-transaction.
               *> Initialize index variables
        Move 0 to idx-account.
+
+       display "Reading shops..."
+      * PERFORM until eof-transaction-reached
+      *     Read input-transaction into transaction 
+      * AT END
+      *     Set eof-transaction-reached to True
+       display "Reading shops done."
+
+       display "Reading months..."
+
+       display "Reading months done!"
 
               *> Main transaction loop
            display "Beginning transaction loop..."
