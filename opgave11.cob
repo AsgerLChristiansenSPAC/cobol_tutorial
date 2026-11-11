@@ -40,7 +40,7 @@
           
            01 idx-account    pic 9(3) value zeroes.
            
-           78 account-array-size value 3.
+           78 account-array-size value 29.
            01 account-array occurs account-array-size times.
            05 account-id pic x(15) value spaces.
            05 customer-name pic x(30) value spaces.
@@ -194,6 +194,8 @@
            display account-total of account-array(idx-account)
            
            display idx-account
+           if account-id of account-array(idx-account)
+           not equal spaces
            *> If (idx) account has higher total than first place
            if account-total of account-array(idx-account)
            greater than
@@ -251,6 +253,7 @@
                       perform replace-empty-rank
                    end-if
                end-if
+           end-if
            end-if
 
            end-perform
