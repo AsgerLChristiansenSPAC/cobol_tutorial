@@ -244,18 +244,23 @@
        move 1 to idx-shop.
        
        
+           display "Butik      Antal transaktioner"
        perform varying idx-shop from 1 by 1 until idx-shop greater than
        SHOP-ARRAY-SIZE
            display shop-array(idx-shop)
        end-perform.
+       display "Total transaktioner:"
        display ws-total-transactions.
 
         move 1 to idx-month.
+       display "Måned     Indbetalinger (DKK) Udbetalinger (DKK)"
        perform varying idx-month from 1 by 1 until idx-month
        greater than        month-ARRAY-SIZE
-           display month-acronym of month-array(idx-month)
-           display month-income of month-array(idx-month)
-           display month-expenses of month-array(idx-month)
+       display month-acronym of month-array(idx-month)
+           "     "
+            month-income of month-array(idx-month)
+           "     "
+           month-expenses of month-array(idx-month)
        end-perform.
        STOP RUN.
               *> PARAGRAPHS to IMPORT:
@@ -311,14 +316,18 @@
 
        update-account-ranking.
            move 1 to idx-account.
+           *> Loop through ALL accounts generated.
            perform varying idx-account from 1 by 1 until 
            idx-account > ACCOUNT-ARRAY-SIZE
+
+      * If not an empty account.    
            if account-id of account-array(idx-account)
            not equal spaces
-           *> If (idx) account has higher total than first place
-           if account-total of account-array(idx-account)
-           greater than
-           account-total of ranking-array(1)
+
+               *> If (idx) account has higher total than first place
+               if account-total of account-array(idx-account)
+               greater than
+               account-total of ranking-array(1)
            
            *> Move second place to third. Overwrite third.
            move 2 to idx-ranking
@@ -342,7 +351,7 @@
                *> If higher than second place
                if account-total of account-array(idx-account)
                greater than
-               account-total of ranking-array(idx-ranking)
+               account-total of ranking-array(2)
 
                *> Move second place to third. Overwrite third.
                move 2 to idx-ranking
@@ -362,7 +371,7 @@
                    *> If higher than third place
                    if account-total of account-array(idx-account)
                    greater than
-                   account-total of ranking-array(idx-ranking)
+                   account-total of ranking-array(3)
 
                    *> Move current-account into third place
                     move account-id of account-array(idx-account)
@@ -508,7 +517,6 @@
            move 1 to idx-month
            perform varying idx-month from 1 by 1
            until idx-month > month-array-size
-           display month-nr of month-array(idx-month)
            *> Extract datetime.
                move datetime of transaction to ws-datetime
                 
