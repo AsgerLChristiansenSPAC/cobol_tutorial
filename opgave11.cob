@@ -87,9 +87,13 @@
            01 month-array occurs MONTH-ARRAY-SIZE times.
            copy "data_copybooks/month.cpy".
            
-           01 idx-ranking pic 9(1) value 0.
-           01 ranking-array occurs 3 times.
+           01 idx-account-ranking pic 9(1) value 0.
+           01 account-ranking-array occurs 3 times.
                copy "data_copybooks/account_ranking.cpy".
+               
+           01 idx-shop-ranking pic 9(1) value 0.
+           01 shop-ranking-array occurs 3 times.
+               copy "data_copybooks/shop_ranking.cpy".
 
            
            *> Datetime manipulation
@@ -209,7 +213,8 @@
                perform update-account-row
                
               
-              *> Do anything else that needs doing regardless of accounts.
+              *> Do anything else that needs 
+              *>doing regardless of accounts.
            else
                *> increment index-account, cause its a new account.
                add 1 to idx-account
@@ -223,7 +228,8 @@
        END-READ
        END-PERFORM.
               *> What can be reused?
-              *> Probably the code related to reading and computing TOTALs.
+              *> Probably the code related to
+              *> reading and computing TOTALs.
 
               *> TASK PART 1:  SALDO PER CUStoMER-ID
               *> We need an         *>array        *> of customer ID's.
@@ -236,18 +242,28 @@
               *> transaction-currency-convert and update TOTALs,
               *> like in the previous script.
 
-              *> And then, as proof of concept, we need to DISPLAY the three
+              *> And then, as proof of concept,
+              *> we need to DISPLAY the three
               *> highest TOTALs.
            close input-transaction
-       display "reading transactions done, beginning ranking..."
+       display "reading transactions done, beginning account-ranking..."
        perform update-account-ranking.
+       perform update-shop-ranking.
+
+
        move 1 to idx-shop.
        
        
-           display "Butik      Antal transaktioner"
+           display "Butik      Antal transaktioner   "
+           "indtægter  udgifter"
        perform varying idx-shop from 1 by 1 until idx-shop greater than
        SHOP-ARRAY-SIZE
-           display shop-array(idx-shop)
+           display shop-name of shop-array(idx-shop)
+            transaction-count of shop-array(idx-shop)
+            "    "
+             shop-income of shop-array(idx-shop)
+            "    "
+              shop-expenses of shop-array(idx-shop)
        end-perform.
        display "Total transaktioner:"
        display ws-total-transactions.
@@ -292,14 +308,17 @@
               *> if foreign currency = EUR
                if transaction-currency of transaction = "EUR"
               *> perform conversion.
-               compute ws-amount-decimal = ws-amount-decimal         *> 7.5
+               compute ws-amount-decimal = ws-amount-decimal    
+                    *> 7.5
                end-if
               *> if foreign currency = USD
                if transaction-currency of transaction = "USD"
-               compute ws-amount-decimal = ws-amount-decimal         *>  6.8
+               compute ws-amount-decimal = ws-amount-decimal      
+                  *>  6.8
                end-if
 
-              *> Now what conversion is achieved, we want to move it to the
+              *> Now what conversion is achieved, 
+              *> we want to move it to the
               *> FIRST column (the DKK column).
                move    ws-amount-decimal to ws-amount-format-1
 
@@ -314,154 +333,6 @@
                EXIT.
        
 
-       update-account-ranking.
-           move 1 to idx-account.
-           *> Loop through ALL accounts generated.
-           perform varying idx-account from 1 by 1 until 
-           idx-account > ACCOUNT-ARRAY-SIZE
-
-      * If not an empty account.    
-           if account-id of account-array(idx-account)
-           not equal spaces
-
-               *> If (idx) account has higher total than first place
-               if account-total of account-array(idx-account)
-               greater than
-               account-total of ranking-array(1)
-           
-           *> Move second place to third. Overwrite third.
-           move 2 to idx-ranking
-           perform cascade-ranks-down
-
-           *> Move first place to second. Overwrite second.
-           move 1 to idx-ranking
-           perform cascade-ranks-down
-
-           
-           *> Move current account to first place.
-           move account-id of account-array(idx-account)
-           to account-id of ranking-array(1)
-           move customer-name of account-array(idx-account)
-           to customer-name of ranking-array(1)
-
-           move account-total of account-array(idx-account)
-           to account-total of ranking-array(1)
-
-           else
-               *> If higher than second place
-               if account-total of account-array(idx-account)
-               greater than
-               account-total of ranking-array(2)
-
-               *> Move second place to third. Overwrite third.
-               move 2 to idx-ranking
-               perform cascade-ranks-down
-
-                  *> Move current account to second place.
-                  move account-id of account-array(idx-account)
-                  to account-id of ranking-array(2)
-                   move customer-name of account-array(idx-account)
-                   to customer-name of ranking-array(2)
-
-                  move account-total of account-array(idx-account)
-                  to account-total of ranking-array(2)
-
-               else
-                   
-                   *> If higher than third place
-                   if account-total of account-array(idx-account)
-                   greater than
-                   account-total of ranking-array(3)
-
-                   *> Move current-account into third place
-                    move account-id of account-array(idx-account)
-                   to account-id of ranking-array(3)
-                   move customer-name of account-array(idx-account)
-                   to customer-name of ranking-array(3)
-
-                    move account-total of account-array(idx-account)
-                   to account-total of ranking-array(3)
-                   else
-                   *> If not greater than any rank, see if there are
-                   *> empty ranks to fill.        
-                      perform replace-empty-rank
-                   end-if
-               end-if
-           end-if
-           end-if
-
-           end-perform
-           display "Current ranking:"
-           display "First: " account-id of ranking-array(1)
-           customer-name of ranking-array(1)
-            account-total of ranking-array(1)
-           display "Second: " account-id of ranking-array(2)
-           customer-name of ranking-array(2)
-            account-total of ranking-array(2)
-           display "Third: " account-id of ranking-array(3)
-           customer-name of ranking-array(3)
-            account-total of ranking-array(3)
-       exit.
-       
-       
-       replace-empty-rank.
-           
-           move 1 to idx-ranking
-           *> Replace empty slot if second slot empty.
-           if account-id of ranking-array(idx-ranking) equal spaces
-           move account-id of account-array(idx-account)
-           to account-id of ranking-array(idx-ranking)
-                   move customer-name of account-array(idx-account)
-                   to customer-name of ranking-array(idx-ranking)
-           move account-total of account-array(idx-account)
-           to account-total of ranking-array(idx-ranking)
-           else
-               *> Replace empty slot if second slot empty.
-               move 2 to idx-ranking
-               if account-id of ranking-array(idx-ranking) equal spaces
-               
-               move account-id of account-array(idx-account)
-               to account-id of ranking-array(idx-ranking)
-                   move customer-name of account-array(idx-account)
-                   to customer-name of ranking-array(idx-ranking)
-    
-               move account-total of account-array(idx-account)
-               to account-total of ranking-array(idx-ranking)
-               else
-                   *> Replace empty slot if third slot empty.
-                   move 3 to idx-ranking
-                   if account-id of ranking-array(idx-ranking)
-                   equal spaces
-                   
-                   move account-id of account-array(idx-account)
-                   to account-id of ranking-array(idx-ranking)
-                   move customer-name of account-array(idx-account)
-                   to customer-name of ranking-array(idx-ranking)
-        
-                   move account-total of account-array(idx-account)
-                   to account-total of ranking-array(idx-ranking)
-                   
-                   end-if
-           end-if
-       end-if
-       exit.
-
-
-       cascade-ranks-down.
-           if idx-ranking < 3
-           *> Move currently indexed rank one down.
-                  move account-id of ranking-array(idx-ranking)
-                  to account-id of ranking-array(idx-ranking + 1)
-                  move customer-name of ranking-array(idx-ranking)
-                  to customer-name of ranking-array(idx-ranking + 1)
-                  
-                  
-                  move account-total of ranking-array(idx-ranking)
-                  to account-total of ranking-array(idx-ranking + 1)
-
-           end-if
-           
-       exit.
 
        update-account-row.
            
@@ -477,24 +348,6 @@
 
 
        
-              *> Update TOTALs.
-      
-       update-totals.
-              *> if not new account.
-
-              *> Should be run after currency conversion, meaning BELØB DECIMAL
-              *> should contain DKK.
-              *> Add to TOTAL if positive:
-       if ws-amount-decimal is greater than 0
-           COMPUTE ws-income-decimal =
-            ws-income-decimal + ws-amount-decimal
-       end-if.
-              *> if negative.
-       if ws-amount-decimal is less than 0
-       COMPUTE ws-expenses-decimal = ws-expenses-decimal +
-       ws-amount-decimal
-       end-if.
-       EXIT.
 
 
        
@@ -508,6 +361,14 @@
                if shop-name of transaction equal shop-name of
                shop-array(idx-shop)
                add 1 to transaction-count of shop-array(idx-shop)
+                   if ws-amount-decimal > 0
+                   add ws-amount-decimal
+                   to shop-income of shop-array(idx-shop)
+                   end-if
+
+                   if ws-amount-decimal < 0
+                   add ws-amount-decimal
+                   to shop-expenses of shop-array(idx-shop)
                end-if
 
            end-perform.
@@ -541,6 +402,346 @@
               *> REMAINING to-DO:
           end-perform
        exit.
+
+       update-account-ranking.
+           move 1 to idx-account.
+           *> Loop through ALL accounts generated.
+           perform varying idx-account from 1 by 1 until 
+           idx-account > ACCOUNT-ARRAY-SIZE
+
+      * If not an empty account.    
+           if account-id of account-array(idx-account)
+           not equal spaces
+
+               *> If (idx) account has higher total than first place
+               if account-total of account-array(idx-account)
+               greater than
+               account-total of account-ranking-array(1)
+           
+           *> Move second place to third. Overwrite third.
+           move 2 to idx-account-ranking
+           perform cascade-account-ranks-down
+
+           *> Move first place to second. Overwrite second.
+           move 1 to idx-account-ranking
+           perform cascade-account-ranks-down
+
+           
+           *> Move current account to first place.
+           move account-id of account-array(idx-account)
+           to account-id of account-ranking-array(1)
+           move customer-name of account-array(idx-account)
+           to customer-name of account-ranking-array(1)
+
+           move account-total of account-array(idx-account)
+           to account-total of account-ranking-array(1)
+
+           else
+               *> If higher than second place
+               if account-total of account-array(idx-account)
+               greater than
+               account-total of account-ranking-array(2)
+
+               *> Move second place to third. Overwrite third.
+               move 2 to idx-account-ranking
+               perform cascade-account-ranks-down
+
+                  *> Move current account to second place.
+                  move account-id of account-array(idx-account)
+                  to account-id of account-ranking-array(2)
+                   move customer-name of account-array(idx-account)
+                   to customer-name of account-ranking-array(2)
+
+                  move account-total of account-array(idx-account)
+                  to account-total of account-ranking-array(2)
+
+               else
+                   
+                   *> If higher than third place
+                   if account-total of account-array(idx-account)
+                   greater than
+                   account-total of account-ranking-array(3)
+
+                   *> Move current-account into third place
+                    move account-id of account-array(idx-account)
+                   to account-id of account-ranking-array(3)
+                   move customer-name of account-array(idx-account)
+                   to customer-name of account-ranking-array(3)
+
+                    move account-total of account-array(idx-account)
+                   to account-total of account-ranking-array(3)
+                   else
+                   *> If not greater than any rank, see if there are
+                   *> empty ranks to fill.        
+                      perform replace-empty-account-rank
+                   end-if
+               end-if
+           end-if
+           end-if
+
+           end-perform
+           display "Current account-ranking:"
+           display "First: " account-id of account-ranking-array(1)
+           customer-name of account-ranking-array(1)
+            account-total of account-ranking-array(1)
+           display "Second: " account-id of account-ranking-array(2)
+           customer-name of account-ranking-array(2)
+            account-total of account-ranking-array(2)
+           display "Third: " account-id of account-ranking-array(3)
+           customer-name of account-ranking-array(3)
+            account-total of account-ranking-array(3)
+       exit.
+       
+       
+       replace-empty-account-rank.
+           
+           move 1 to idx-account-ranking
+           *> Replace empty slot if second slot empty.
+           if account-id 
+           of account-ranking-array(idx-account-ranking) equal spaces
+           move account-id 
+           of account-array(idx-account)
+           to account-id 
+           of account-ranking-array(idx-account-ranking)
+                   move customer-name 
+                   of account-array(idx-account)
+                   to customer-name 
+                   of account-ranking-array(idx-account-ranking)
+           move account-total 
+           of account-array(idx-account)
+           to account-total 
+           of account-ranking-array(idx-account-ranking)
+           else
+               *> Replace empty slot if second slot empty.
+               move 2 to idx-account-ranking
+               if account-id 
+               of account-ranking-array(idx-account-ranking) equal spaces
+               
+               move account-id 
+               of account-array(idx-account)
+               to account-id 
+               of account-ranking-array(idx-account-ranking)
+                   move customer-name 
+                   of account-array(idx-account)
+                   to customer-name 
+                   of account-ranking-array(idx-account-ranking)
+    
+               move account-total 
+               of account-array(idx-account)
+               to account-total 
+               of account-ranking-array(idx-account-ranking)
+               else
+                   *> Replace empty slot if third slot empty.
+                   move 3 to idx-account-ranking
+                   if account-id 
+                   of account-ranking-array(idx-account-ranking)
+                   equal spaces
+                   
+                   move account-id 
+                   of account-array(idx-account)
+                   to account-id 
+                   of account-ranking-array(idx-account-ranking)
+                   move customer-name 
+                   of account-array(idx-account)
+                   to customer-name
+                    of account-ranking-array(idx-account-ranking)
+        
+                   move account-total 
+                   of account-array(idx-account)
+                   to account-total 
+                   of account-ranking-array(idx-account-ranking)
+                   
+                   end-if
+           end-if
+       end-if
+       exit.
+
+
+       cascade-account-ranks-down.
+           if idx-account-ranking < 3
+           *> Move currently indexed rank one down.
+                  move account-id 
+                  of account-ranking-array(idx-account-ranking)
+                  to account-id 
+                  of account-ranking-array(idx-account-ranking + 1)
+                  move customer-name 
+                  of account-ranking-array(idx-account-ranking)
+                  to customer-name 
+                  of account-ranking-array(idx-account-ranking + 1)
+                  
+                  
+                  move account-total 
+                  of account-ranking-array(idx-account-ranking)
+                  to account-total 
+                  of account-ranking-array(idx-account-ranking + 1)
+
+           end-if
+           
+       exit.
+
+           
+
+       update-shop-ranking.
+           move 1 to idx-shop.
+           *> Loop through ALL shops generated.
+           perform varying idx-shop from 1 by 1 until 
+           idx-shop > shop-ARRAY-SIZE
+
+
+               *> If (idx) shop has higher total than first place
+               if shop-income of shop-array(idx-shop)
+               greater than
+               shop-income of shop-ranking-array(1)
+           
+           *> Move second place to third. Overwrite third.
+           move 2 to idx-shop-ranking
+           perform cascade-shop-ranks-down
+
+           *> Move first place to second. Overwrite second.
+           move 1 to idx-shop-ranking
+           perform cascade-shop-ranks-down
+
+           
+           *> Move current shop to first place.
+           move shop-name of shop-array(idx-shop)
+           to shop-name of shop-ranking-array(1)
+           move shop-expenses of shop-array(idx-shop)
+           to shop-expenses of shop-ranking-array(1)
+
+           move shop-income of shop-array(idx-shop)
+           to shop-income of shop-ranking-array(1)
+
+           else
+               *> If higher than second place
+               if shop-income of shop-array(idx-shop)
+               greater than
+               shop-income of shop-ranking-array(2)
+
+               *> Move second place to third. Overwrite third.
+               move 2 to idx-shop-ranking
+               perform cascade-shop-ranks-down
+
+                  *> Move current shop to second place.
+                  move shop-name of shop-array(idx-shop)
+                  to shop-name of shop-ranking-array(2)
+                   move shop-expenses of shop-array(idx-shop)
+                   to shop-expenses of shop-ranking-array(2)
+
+                  move shop-income of shop-array(idx-shop)
+                  to shop-income of shop-ranking-array(2)
+
+               else
+                   
+                   *> If higher than third place
+                   if shop-income of shop-array(idx-shop)
+                   greater than
+                   shop-income of shop-ranking-array(3)
+
+                   *> Move current-shop into third place
+                    move shop-name of shop-array(idx-shop)
+                   to shop-name of shop-ranking-array(3)
+                   move shop-expenses of shop-array(idx-shop)
+                   to shop-expenses of shop-ranking-array(3)
+
+                    move shop-income of shop-array(idx-shop)
+                   to shop-income of shop-ranking-array(3)
+                   else
+                   *> If not greater than any rank, see if there are
+                   *> empty ranks to fill.        
+                      perform replace-empty-shop-rank
+                   end-if
+               end-if
+           end-if
+
+           end-perform
+           display "Current shop-ranking:"
+           display "First: " shop-name of shop-ranking-array(1)
+            shop-income of shop-ranking-array(1)
+           display "Second: " shop-name of shop-ranking-array(2)
+            shop-income of shop-ranking-array(2)
+           display "Third: " shop-name of shop-ranking-array(3)
+            shop-income of shop-ranking-array(3)
+       exit.
+       
+       
+       replace-empty-shop-rank.
+           
+           move 1 to idx-shop-ranking
+           *> Replace empty slot if second slot empty.
+           if shop-name 
+           of shop-ranking-array(idx-shop-ranking) equal spaces
+           move shop-name
+            of shop-array(idx-shop)
+           to shop-name 
+           of shop-ranking-array(idx-shop-ranking)
+                   move shop-expenses of shop-array(idx-shop)
+                   to shop-expenses 
+                   of shop-ranking-array(idx-shop-ranking)
+           move shop-income of shop-array(idx-shop)
+           to shop-income 
+           of shop-ranking-array(idx-shop-ranking)
+           else
+               *> Replace empty slot if second slot empty.
+               move 2 to idx-shop-ranking
+               if shop-name 
+               of shop-ranking-array(idx-shop-ranking) equal spaces
+               
+               move shop-name of shop-array(idx-shop)
+               to shop-name 
+               of shop-ranking-array(idx-shop-ranking)
+                   move shop-expenses of shop-array(idx-shop)
+                   to shop-expenses 
+                   of shop-ranking-array(idx-shop-ranking)
+    
+               move shop-income of shop-array(idx-shop)
+               to shop-income 
+               of shop-ranking-array(idx-shop-ranking)
+               else
+                   *> Replace empty slot if third slot empty.
+                   move 3 to idx-shop-ranking
+                   if shop-name 
+                   of shop-ranking-array(idx-shop-ranking)
+                   equal spaces
+                   
+                   move shop-name of shop-array(idx-shop)
+                   to shop-name 
+                   of shop-ranking-array(idx-shop-ranking)
+                   move shop-expenses of shop-array(idx-shop)
+                   to shop-expenses 
+                   of shop-ranking-array(idx-shop-ranking)
+        
+                   move shop-income of shop-array(idx-shop)
+                   to shop-income
+                    of shop-ranking-array(idx-shop-ranking)
+                   
+                   end-if
+           end-if
+       end-if
+       exit.
+
+
+       cascade-shop-ranks-down.
+           if idx-shop-ranking < 3
+           *> Move currently indexed rank one down.
+                  move shop-name
+                   of shop-ranking-array(idx-shop-ranking)
+                  to shop-name 
+                  of shop-ranking-array(idx-shop-ranking + 1)
+                  move shop-expenses 
+                  of shop-ranking-array(idx-shop-ranking)
+                  to shop-expenses
+                   of shop-ranking-array(idx-shop-ranking + 1)
+                  
+                  
+                  move shop-income 
+                  of shop-ranking-array(idx-shop-ranking)
+                  to shop-income 
+                  of shop-ranking-array(idx-shop-ranking + 1)
+
+           end-if
+           
+       exit.
+       
               *> TASK PART 2: PRINT PER MONTH
               *> We need an array of months. It doesn't seem like we have
               *> data for multiple years here.
@@ -550,7 +751,7 @@
               *> TASK PART 3: PRINT PER SHOP
               *> Same stuff. A shop array that is filled regularly.
 
-              *> Task part 4: Ranking.
+              *> Task part 4: account-ranking.
 
               *> top 3 customer IDs (technically part 1)
               *> top 5 shops.
