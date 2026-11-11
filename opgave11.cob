@@ -8,7 +8,7 @@
                  Organization is line sequential.
                  
                  Select input-transaction assign to
-                 "transaktionerMini.txt"
+                 "transaktioner.txt"
                  Organization is line sequential.
 
        Data division.
@@ -24,7 +24,8 @@
 
        
        Working-Storage Section.
-               
+           
+           *> Integer division
               *> Account ID manipulation
            01 current-account-id pic x(15) value spaces.
            01 previous-account-id pic x(15) value spaces.
@@ -38,9 +39,9 @@
       
            *> Arrays
           
-           01 idx-account    pic 9(3) value zeroes.
+           01 idx-account    pic 9(6) value zeroes.
            
-           78 account-array-size value 29.
+           78 account-array-size value 10000.
            01 account-array occurs account-array-size times.
            05 account-id pic x(15) value spaces.
            05 customer-name pic x(30) value spaces.
@@ -84,6 +85,7 @@
        Move 0 to idx-account.
 
               *> Main transaction loop
+           display "Beginning transaction loop..."
        PERFORM until eof-transaction-reached
            Read input-transaction into transaction 
        AT END
@@ -132,6 +134,7 @@
               *> And then, as proof of concept, we need to DISPLAY the three
               *> highest TOTALs.
            close input-transaction
+       display "reading transactions done, beginning ranking..."
        perform update-account-ranking.
        STOP RUN.
               *> PARAGRAPHS to IMPORT:
@@ -188,12 +191,7 @@
        update-account-ranking.
            move 1 to idx-account.
            perform varying idx-account from 1 by 1 until 
-           idx-account > account-array-size
-           display idx-account
-           display account-id of account-array(idx-account)
-           display account-total of account-array(idx-account)
-           
-           display idx-account
+           idx-account > ACCOUNT-ARRAY-SIZE
            if account-id of account-array(idx-account)
            not equal spaces
            *> If (idx) account has higher total than first place
@@ -213,6 +211,8 @@
            *> Move current account to first place.
            move account-id of account-array(idx-account)
            to account-id of ranking-array(1)
+           move customer-name of account-array(idx-account)
+           to customer-name of ranking-array(1)
 
            move account-total of account-array(idx-account)
            to account-total of ranking-array(1)
@@ -230,6 +230,8 @@
                   *> Move current account to second place.
                   move account-id of account-array(idx-account)
                   to account-id of ranking-array(2)
+                   move customer-name of account-array(idx-account)
+                   to customer-name of ranking-array(2)
 
                   move account-total of account-array(idx-account)
                   to account-total of ranking-array(2)
@@ -244,6 +246,8 @@
                    *> Move current-account into third place
                     move account-id of account-array(idx-account)
                    to account-id of ranking-array(3)
+                   move customer-name of account-array(idx-account)
+                   to customer-name of ranking-array(3)
 
                     move account-total of account-array(idx-account)
                    to account-total of ranking-array(3)
@@ -259,10 +263,13 @@
            end-perform
            display "Current ranking:"
            display "First: " account-id of ranking-array(1)
+           customer-name of ranking-array(1)
             account-total of ranking-array(1)
            display "Second: " account-id of ranking-array(2)
+           customer-name of ranking-array(2)
             account-total of ranking-array(2)
            display "Third: " account-id of ranking-array(3)
+           customer-name of ranking-array(3)
             account-total of ranking-array(3)
        exit.
        
@@ -271,38 +278,38 @@
            
            move 1 to idx-ranking
            *> Replace empty slot if second slot empty.
-           display "first place check"
            if account-id of ranking-array(idx-ranking) equal spaces
            move account-id of account-array(idx-account)
            to account-id of ranking-array(idx-ranking)
+                   move customer-name of account-array(idx-account)
+                   to customer-name of ranking-array(idx-ranking)
            move account-total of account-array(idx-account)
            to account-total of ranking-array(idx-ranking)
-           display "empty rank at position " idx-ranking
            else
-               display "second place check"
                *> Replace empty slot if second slot empty.
                move 2 to idx-ranking
                if account-id of ranking-array(idx-ranking) equal spaces
                
                move account-id of account-array(idx-account)
                to account-id of ranking-array(idx-ranking)
+                   move customer-name of account-array(idx-account)
+                   to customer-name of ranking-array(idx-ranking)
     
                move account-total of account-array(idx-account)
                to account-total of ranking-array(idx-ranking)
-               display "empty rank at position " idx-ranking
                else
                    *> Replace empty slot if third slot empty.
-                   display "third place check"
                    move 3 to idx-ranking
                    if account-id of ranking-array(idx-ranking)
                    equal spaces
                    
                    move account-id of account-array(idx-account)
                    to account-id of ranking-array(idx-ranking)
+                   move customer-name of account-array(idx-account)
+                   to customer-name of ranking-array(idx-ranking)
         
                    move account-total of account-array(idx-account)
                    to account-total of ranking-array(idx-ranking)
-                   display "empty rank at position " idx-ranking
                    
                    end-if
            end-if
@@ -315,6 +322,9 @@
            *> Move currently indexed rank one down.
                   move account-id of ranking-array(idx-ranking)
                   to account-id of ranking-array(idx-ranking + 1)
+                  move customer-name of ranking-array(idx-ranking)
+                  to customer-name of ranking-array(idx-ranking + 1)
+                  
                   
                   move account-total of ranking-array(idx-ranking)
                   to account-total of ranking-array(idx-ranking + 1)
@@ -334,17 +344,6 @@
            compute account-total of account-array(idx-account) =
            account-total of account-array(idx-account) 
            + ws-amount-decimal
-           
-           display "Current account (and name):"
-           display idx-account
-           display customer-name of account-array(idx-account)
-           display " "
-           display "Current transaction amount:"
-           display ws-amount-decimal
-           display " "
-           display "New account total:"
-           display account-total of account-array(idx-account)
-           display " "
        exit.
 
 
