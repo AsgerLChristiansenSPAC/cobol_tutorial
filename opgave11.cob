@@ -32,12 +32,13 @@
 
                   fd input-shop.
                   01 shop.
-                  copy "data_copybooks/shop.cpy".
+                  05 shop-name PIC X(20) VALUE SPACES.
 
 
                   fd input-month.
                   01 month.
-                  copy "data_copybooks/month.cpy".
+                  05 month-nr pic X(2) value spaces.
+                  05 month-acronym pic x(3) value spaces.
 
 
        
@@ -123,22 +124,54 @@
 
        PROCEDURE DIVISION.
        
+       open input input-shop.
+       display "Reading shops..."
+       perform until eof-shop-reached
+           read input-shop into shop
+
+           AT END
+               set eof-shop-reached to True
+           NOT AT END
+           add 1 to idx-shop
+           *> Move into shop array
+           move shop-name of shop 
+           to shop-name of shop-array(idx-shop)
+
+           END-READ
+           end-perform.
+
+       close input-shop.
+           
+               
+       display "Reading shops done."
+
+       display "Reading months..."
+       open input input-month.
+       perform until eof-month-reached
+           read input-month into month
+
+           AT END
+               set eof-month-reached to True
+           NOT AT END
+           add 1 to idx-month
+           *> Move into month array
+           move month-nr of month 
+           to month-nr of month-array(idx-month)
+           
+           move month-acronym of month
+           to month-acronym of month-array(idx-month)
+
+           END-READ
+           end-perform.
+           
+       close input-month.
+
+       display "Reading months done!"
+
               *> Begin loop of Transactions
        Open input input-transaction.
               *> Initialize index variables
        Move 0 to idx-account.
-
-       display "Reading shops..."
-      * PERFORM until eof-transaction-reached
-      *     Read input-transaction into transaction 
-      * AT END
-      *     Set eof-transaction-reached to True
-       display "Reading shops done."
-
-       display "Reading months..."
-
-       display "Reading months done!"
-
               *> Main transaction loop
            display "Beginning transaction loop..."
        PERFORM until eof-transaction-reached
