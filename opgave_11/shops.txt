@@ -1,0 +1,13 @@
+ Supermarked
+ Tøjbutik
+ Elektronikbutik
+ Restaurant
+ Boghandel
+ Apotek
+ Tankstation
+ Café
+ Biograf
+ Møbelbutik
+ Blomsterhandler
+ Bageri
+ Fitnesscenter
