@@ -11,6 +11,6 @@
        05 transaction-currency PIC X(3) VALUE SPACES.
        05 transaction-type PIC X(20) VALUE SPACES.
       * 141 + 18 = 159
-       05 shop PIC X(20) VALUE SPACES.  
+       05 shop-name PIC X(20) VALUE SPACES.  
        05 datetime PIC X(40) VALUE SPACES.
        
