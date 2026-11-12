@@ -35,7 +35,8 @@
       * Arrays
 
            *> Sanctions array
-           78 sanction-array-size value 200.
+           78 SANCTION-ARRAY-SIZE value 201.
+           *> Set to 201 to combat a weird memory overflow error.
            01 sanction-array occurs SANCTION-ARRAY-SIZE times
            indexed by sanction-idx.
            copy "data_copybooks/sanction.cpy".
@@ -73,46 +74,24 @@
                        15 levenshtein-value pic 9(2) value zeros.
 
        PROCEDURE DIVISION.
-           *> Load all sanctions into sanction-array.
-
-           
-           open input input-sanction.
-              display "Reading sanctions..."
-           perform until eof-sanction-reached
-           read input-sanction into sanction
-
-           AT END
-               set eof-sanction-reached to True
-           NOT AT END
-           add 1 to sanction-idx
-           *> Move sanction into sanction array
-           move sanction 
-           to sanction-array( sanction-idx)
-
-           END-READ
-           end-perform.
-
-              close input-sanction.
-           display sanction-array(3)
-           display sanction-array(54)
-           display sanction-array(177)
+           perform load-all-sanctions.
 
            *> Initialize levenshtein matrix
 
-           move "John Smith" to ws-string-i.
-           move "Smith John" to ws-string-j.
+           move "John Smithson" to ws-string-i.
+           move "Smith Johnson" to ws-string-j.
 
-      *     MOVE "kattepine" TO WS-STRING-i.
-      *     move "catnip and stuff" to ws-string-j.
            PERFORM calculate-length-i.
-           DISPLAY "Actual Length: " ws-len-i
+           DISPLAY "Actual Length i : " ws-len-i.
            PERFORM calculate-length-j.
-           DISPLAY "Actual Length: " ws-len-j
+           DISPLAY "Actual Length j : " ws-len-j.
            compute ws-levenshtein-i-dim = ws-len-i + 1.
            compute ws-levenshtein-j-dim = ws-len-j + 1.
            display "Matrix dimensions: "
            display "i : " ws-levenshtein-i-dim.
            display "j : " ws-levenshtein-j-dim.
+
+           
 
            perform calculate-longer-length.
            perform init-levenshtein-matrix.
@@ -272,3 +251,23 @@
            *> per customer.
            *> Saving the scores.
 
+           load-all-sanctions.
+           *> Load all sanctions into sanction-array.
+
+           open input input-sanction.
+              display "Reading sanctions..."
+           perform until eof-sanction-reached
+           read input-sanction into sanction
+           AT END
+               set eof-sanction-reached to True
+           NOT AT END
+           add 1 to sanction-idx
+           *> Move sanction into sanction array
+           move sanction 
+           to sanction-array(sanction-idx)
+
+           END-READ
+           end-perform.
+
+              close input-sanction.
+           exit.
