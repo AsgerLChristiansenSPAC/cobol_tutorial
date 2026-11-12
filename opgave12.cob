@@ -24,6 +24,16 @@
        
        Working-Storage Section.
       * Dummy variables for functions in development.
+      
+      * End of file flags
+           *> Sanctions eof
+           
+           
+           01   eof-sanction
+           pic x value "N".
+           88 eof-sanction-reached value "Y".
+      * Arrays
+
            *> Sanctions array
            78 sanction-array-size value 200.
            01 sanction-array occurs SANCTION-ARRAY-SIZE times
@@ -63,6 +73,30 @@
                        15 levenshtein-value pic 9(2) value zeros.
 
        PROCEDURE DIVISION.
+           *> Load all sanctions into sanction-array.
+
+           
+           open input input-sanction.
+              display "Reading sanctions..."
+           perform until eof-sanction-reached
+           read input-sanction into sanction
+
+           AT END
+               set eof-sanction-reached to True
+           NOT AT END
+           add 1 to sanction-idx
+           *> Move sanction into sanction array
+           move sanction 
+           to sanction-array( sanction-idx)
+
+           END-READ
+           end-perform.
+
+              close input-sanction.
+           display sanction-array(3)
+           display sanction-array(54)
+           display sanction-array(177)
+
            *> Initialize levenshtein matrix
 
            move "John Smith" to ws-string-i.
