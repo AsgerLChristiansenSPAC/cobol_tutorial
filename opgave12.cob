@@ -24,7 +24,11 @@
        
        Working-Storage Section.
       * Dummy variables for functions in development.
-           
+           *> Sanctions array
+           78 sanction-array-size value 200.
+           01 sanction-array occurs SANCTION-ARRAY-SIZE times
+           indexed by sanction-idx.
+           copy "data_copybooks/sanction.cpy".
 
       *    Variable definition values.
            78 string-i-max value 40.
