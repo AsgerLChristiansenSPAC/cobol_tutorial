@@ -21,6 +21,9 @@
            01 ws-levenshtein-i-dim pic 9(4).
            01 ws-len-j pic 9(4).
            01 ws-levenshtein-j-dim pic 9(4).
+           01 ws-longer-len pic 9(4).
+           01 ws-levenshtein-distance pic 9(4).
+           01 ws-relative-levenshtein pic 9(4).
       
            01 ws-string-i pic x(string-i-max) value spaces.
            01 ws-string-j pic x(string-j-max) value spaces.
@@ -42,8 +45,8 @@
        PROCEDURE DIVISION.
            *> Initialize levenshtein matrix
 
-           move "Lord of the Sith Darth Vader" to ws-string-i.
-           move "Dark Lord Tom Marvolo Riddle" to ws-string-j.
+           move "John Smith" to ws-string-i.
+           move "Smith John" to ws-string-j.
 
       *     MOVE "kattepine" TO WS-STRING-i.
       *     move "catnip and stuff" to ws-string-j.
@@ -57,11 +60,19 @@
            display "i : " ws-levenshtein-i-dim.
            display "j : " ws-levenshtein-j-dim.
 
-           
+           perform calculate-longer-length.
            perform init-levenshtein-matrix.
            perform levenshtein-outer-loop.
            perform display-levenshtein-matrix.
-           perform display-levenshtein-distance.
+           move levenshtein-value (ws-levenshtein-i-dim,
+                                   ws-levenshtein-j-dim)
+           to ws-levenshtein-distance.
+           display "Levenshtein distance: " ws-levenshtein-distance.
+           perform relative-levenshtein-match.
+           display "With longer string length " ws-longer-len
+                    ", relative levenshtein distance is: "
+                    ws-relative-levenshtein "%."
+
 
 
            stop run.
@@ -83,6 +94,23 @@
         *> Re-initialize ws-string-j.
            move function reverse(ws-string-j) to ws-string-j
            
+           exit.
+
+           calculate-longer-length.
+           
+           *> Move longer string length to working storage
+           if ws-len-i greater than ws-len-j
+               move ws-len-i to ws-longer-len
+           end-if
+
+           if ws-len-j greater than ws-len-i
+               move ws-len-j to ws-longer-len
+           end-if
+           
+           if ws-len-i equal ws-len-j
+               move ws-len-i to ws-longer-len
+           end-if
+
            exit.
 
            levenshtein-outer-loop.
@@ -134,6 +162,12 @@
 
            )
            exit.
+           
+           relative-levenshtein-match.
+           compute ws-relative-levenshtein = 
+                   (1 - ws-levenshtein-distance / ws-longer-len) * 100
+               
+           exit.
 
            init-levenshtein-matrix.
            *> Initialize first row and column of levenshtein-matrix.
@@ -155,11 +189,6 @@
            end-perform.
            exit.
            
-           display-levenshtein-distance.
-           display levenshtein-value (ws-levenshtein-i-dim,
-                                       ws-levenshtein-j-dim
-           )
-           exit.
            display-levenshtein-matrix.
            PERFORM VARYING levenshtein-idx-i FROM 1 BY 1
            UNTIL levenshtein-idx-i > ws-levenshtein-i-dim
@@ -178,3 +207,14 @@
            DISPLAY " "
            END-PERFORM
            exit.
+
+
+           *> So the next step: 
+           
+           *> the architecture around it.
+           *> Loading the sanctions list.
+           *> Looping through the customer ID.
+           *> Doing the levenshtein distance thingy a gajillion times
+           *> per customer.
+           *> Saving the scores.
+
