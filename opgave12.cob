@@ -8,12 +8,19 @@
                  Select input-sanction assign to "SanctionList.txt"
                  Organization is line sequential.
 
+                 Select input-customer assign to "KundeOplysninger.txt"
+                 Organization is line sequential.
+
        Data division.
       
            File Section.
                   Fd input-sanction.
                   01 sanction.
                   Copy "data_copybooks/sanction.cpy".
+
+                  Fd input-customer.
+                  01 customer.
+                  Copy "data_copybooks/customer.cpy".
        
        Working-Storage Section.
       * Dummy variables for functions in development.
