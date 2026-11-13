@@ -5,12 +5,18 @@
        Environment Division.
            input-output section.
                File-control.
-                 Select input-sanction assign to "SanctionListMini.txt"
+                 Select input-sanction assign to "SanctionList.txt"
                  Organization is line sequential.
 
                  Select input-customer
                  assign to "KundeOplysningerMini.txt"
                  Organization is line sequential.
+
+                 
+                 SELECT output-sanction
+                  ASSIGN TO 
+                   "SanktionsRapport.txt"
+                 ORGANIZATION IS LINE SEQUENTIAL.
 
        Data division.
       
@@ -22,13 +28,24 @@
                   Fd input-customer.
                   01 customer.
                   Copy "data_copybooks/customer.cpy".
+
+                  FD output-sanction.
+                  01 sanction-report.
+                  05 report-line PIC X(150)   VALUE SPACES.
        
        Working-Storage Section.
       * Dummy variables for functions in development.
+
+                  01 report-line-CLEAN PIC X(150) VALUE SPACES.
+                  01 idx-clean pic 9(3) value zeros.
+                  01 idx-out pic 9(3) value zeros.
+                  01 current-char pic x(1) value spaces.
+                  01 previous-char pic x(1) value spaces.
+      * Best alias variables.
            01 ws-best-alias-match pic 9(1)V99.
            01 ws-best-alias-idx pic 9(2) value zeros.
 
-
+           01 ws-decimal-display pic 9.99.
       * End of file flags
            *> Sanctions eof
            
@@ -44,7 +61,7 @@
            
            01 alias-idx pic 9(2) value zeros.
            *> Sanctions array
-           78 SANCTION-ARRAY-SIZE value 5.
+           78 SANCTION-ARRAY-SIZE value 200.
            *> Set to 201 to combat a weird memory overflow error.
            01 sanction-array occurs SANCTION-ARRAY-SIZE times
            indexed by sanction-idx.
@@ -52,8 +69,6 @@
            05 alias-count pic 9(2) value zeros.
            05 birthdate-format pic X(6) value spaces.
 
-      *     01 alias-statistics occurs SANCTION-ARRAY-SIZE times
-      *     indexed by sanction-idx.
 
       *    Variable definition values.
            78 string-i-max value 40.
@@ -117,12 +132,15 @@
                        15 levenshtein-value pic 9(2) value zeros.
 
        PROCEDURE DIVISION.
+       
+           OPEN OUTPUT output-sanction.
            perform load-all-sanctions.
            perform loop-through-customers.
            *> Initialize levenshtein matrix
 
 
 
+           CLOSE output-sanction.
            stop run.
 
            calculate-length-i.
@@ -321,16 +339,32 @@
            
            perform calculate-match-percentage
 
-               if total-match > 0.50
+               if total-match > 0.70
                display "Suspicious person detected."
-               display customer
-               display sanction-array(sanction-idx)
-               display "Best matching alias: "
-               display alias of sanction-array(sanction-idx,
+               move customer to report-line
+               write sanction-report
+               move sanction-array(sanction-idx) to report-line
+               write sanction-report
+               move "Best matching alias: " to report-line
+               
+               write sanction-report
+               move alias of sanction-array(sanction-idx,
                                    ws-best-alias-idx)
-               display ws-best-alias-match
+               to report-line
+               write sanction-report
+               move ws-best-alias-match to ws-decimal-display
+               move ws-decimal-display
+               to report-line
 
-               display total-match
+               write sanction-report
+               move "Total match:"
+               to report-line
+               write sanction-report
+
+               move total-match to ws-decimal-display
+               move ws-decimal-display
+               to report-line
+               write sanction-report
                end-if
                end-perform.
 
@@ -353,28 +387,6 @@
            end-perform.
            close input-customer.
            exit.
-               *> Loop through the sanction array.
-               
-               *> Compare name with name.
-               *> Extract absolute levenshtein score.
-               *> Compute relative levenshtein score.
-               *> Display if fishy.
-
-               *> Compare name with each alias.
-               *> Repeat steps taken above
-
-               *> Compare birthdate with birthdate.
-               *> Repeat steps taken above
-
-               *> Simply check if country is equal.
-               *> Display if fishy.
-
-           
-               *> MVP solution: If there is anything fishy, display it.
-               
-               *> What data structures do we need?
-               *> Basically... none? Let's try coding it display-
-               *> oriented.
 
 
            load-all-sanctions.
@@ -469,3 +481,32 @@
            alias-count of sanction-array(sanction-idx).
 
            exit.
+           
+           new-line.
+           MOVE SPACES TO report-line.
+           WRITE report-line.
+           EXIT.
+
+
+           
+             CLEAN_ROW.
+             MOVE 1 TO IDX-clean
+             MOVE 1 TO IDX-OUT.
+             MOVE SPACES TO CURRENT-CHAR.
+             MOVE SPACES TO PREVIOUS-CHAR.
+             PERFORM VARYING idx-clean FROM 1 BY 1 UNTIL
+             idx-clean > LENGTH OF report-line
+      * Update current char
+             MOVE report-line(IDX-clean:1) TO CURRENT-CHAR
+      * Evaluate current char and previous char
+             IF CURRENT-CHAR NOT = SPACE OR PREVIOUS-CHAR NOT = SPACE
+                    MOVE CURRENT-CHAR TO report-line-CLEAN(IDX-OUT:1)
+             ADD 1 TO IDX-OUT
+             END-IF
+             MOVE CURRENT-CHAR TO PREVIOUS-CHAR
+             END-PERFORM.
+             MOVE SPACES TO report-line
+             MOVE report-line-CLEAN TO report-line
+             MOVE SPACES TO report-line-CLEAN
+             EXIT.
+           
