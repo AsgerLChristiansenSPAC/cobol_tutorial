@@ -25,7 +25,8 @@
        
        Working-Storage Section.
       * Dummy variables for functions in development.
-
+           01 ws-best-alias-match pic 9(1)V99.
+           01 ws-best-alias-idx pic 9(2) value zeros.
 
 
       * End of file flags
@@ -241,14 +242,9 @@
            levenshtein-algorithm.
            
                   PERFORM calculate-length-i.
-      *         DISPLAY "Actual Length i : " ws-len-i.
                PERFORM calculate-length-j.
-      *     DISPLAY "Actual Length j : " ws-len-j.
                compute ws-levenshtein-i-dim = ws-len-i + 1.
                compute ws-levenshtein-j-dim = ws-len-j + 1.
-      *          display "Matrix dimensions: "
-      *         display "i : " ws-levenshtein-i-dim.
-      *         display "j : " ws-levenshtein-j-dim.
 
            
 
@@ -275,7 +271,10 @@
            perform levenshtein-algorithm
                move ws-relative-levenshtein to name-levenshtein
                *> Compare customer-name with aliases.
-
+           
+               *> re-initialize best match
+               move 0 to ws-best-alias-idx
+               move 0.00 to ws-best-alias-match
            perform varying alias-idx from 1 by 1
                until alias-idx greater than alias-count of 
                sanction-array(sanction-idx)
@@ -287,8 +286,17 @@
                perform levenshtein-algorithm
                move ws-relative-levenshtein
                to alias-levenshtein(alias-idx)
-           display "Levenshtein distance (alias :" alias-idx ")"
-                   alias-levenshtein(alias-idx)
+
+               if alias-levenshtein(alias-idx)
+               greater than
+               ws-best-alias-match
+
+               move alias-levenshtein(alias-idx)
+               to ws-best-alias-match
+
+               move alias-idx to ws-best-alias-idx
+
+               end-if
                
 
                end-perform
@@ -298,41 +306,36 @@
                to ws-string-i
                move birthdate-format of sanction-array(sanction-idx)
                to ws-string-j
-               display "comparing birthdays.."
                perform levenshtein-algorithm
                move ws-relative-levenshtein
                to birthdate-levenshtein
-           display "Levenshtein distance (birthdate)"
-                   birthdate-levenshtein
 
                *> Compare countries.
                move country-code of customer
                to ws-string-i
                move country-code of sanction-array(sanction-idx)
                to ws-string-j
-               display "comparing countries..."
-               display ws-string-i
-               display ws-string-j
                perform levenshtein-algorithm
                move ws-relative-levenshtein
                to country-levenshtein
-           display "Levenshtein distance (country): "
-                   country-levenshtein
+           
+           perform calculate-match-percentage
 
+               if total-match > 0.50
+               display "Suspicious person detected."
+               display customer
+               display sanction-array(sanction-idx)
+               display "Best matching alias: "
+               display alias of sanction-array(sanction-idx,
+                                   ws-best-alias-idx)
+               display ws-best-alias-match
 
+               display total-match
+               end-if
                end-perform.
 
-               *> Each time a customer is compared with a sanctioned
-               *> person, we need to do the following:
-               *> save to a variable WS-NAME-MATCH the product of
-               *> the relative levenshtein match between names and
-               *> the weighing of that (both numbers between 0 and 1).
-               *> Do the same for each alias.
-               *> Do the same for birthdate.
-               *> Do the same for country.
-               *> Then, keeping in mind sanctioned person's alias count,
-               *> we sum the match to a number between 0 and 1.
-               *> And we display that.
+               *> Remaining to-do.
+               *> Display idx of highest matching alias.
            exit.
 
            loop-through-customers.
@@ -457,7 +460,6 @@
            country-levenshtein * name-weight.
            add country-match to total-match.
            
-           display total-match.
 
       *    Final match variables
            exit.
