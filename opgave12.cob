@@ -26,6 +26,8 @@
        Working-Storage Section.
       * Dummy variables for functions in development.
 
+
+
       * End of file flags
            *> Sanctions eof
            
@@ -58,7 +60,30 @@
            78 string-j-max value 40.
            78 levenshtein-j-dim value 41.
            78 max-alias value 5.
-           
+      
+      *    Relative levenshtein
+           01 levenshtein-info.
+           05 name-levenshtein pic 9(1)V99.
+           05 aliases occurs MAX-ALIAS times.
+           10 alias-levenshtein pic 9(1)V99.
+           05 birthdate-levenshtein pic 9(1)V99.
+           05 country-levenshtein pic 9(1)V99.
+      * Weights
+           01 weights.
+           05 name-weight pic 9(1)V99 value 0.25.
+           05 ws-alias-weight pic 9(1)V99 value 0.05.
+           05 birthdate-weight pic 9(1)V99 value 0.30.
+           05 country-weight pic 9(1)V99 value 0.20.
+      *    Final match variables
+           01 match-info.
+           05 name-match pic 9(1)V99.
+           05 alias-matches occurs MAX-ALIAS times.
+           10 alias-match pic 9(1)V99.
+           05 birthdate-match pic 9(1)V99.
+           05 country-match pic 9(1)V99.
+           05 total-match pic 9(1)V99.
+
+
       * Working storage
            01 ws-len-i pic 9(4).
            01 ws-levenshtein-i-dim pic 9(4).
@@ -66,7 +91,7 @@
            01 ws-levenshtein-j-dim pic 9(4).
            01 ws-longer-len pic 9(4).
            01 ws-levenshtein-distance pic 9(4).
-           01 ws-relative-levenshtein pic 9(4).
+           01 ws-relative-levenshtein pic 9(1)V99.
       
            01 ws-string-i pic x(string-i-max) value spaces.
            01 ws-string-j pic x(string-j-max) value spaces.
@@ -92,10 +117,6 @@
 
        PROCEDURE DIVISION.
            perform load-all-sanctions.
-           display birthdate of sanction-array(1)
-           display birthdate-format of sanction-array(1)
-           display birthdate of sanction-array(2)
-           display birthdate-format of sanction-array(2)
            perform loop-through-customers.
            *> Initialize levenshtein matrix
 
@@ -193,7 +214,7 @@
            
            relative-levenshtein-match.
            compute ws-relative-levenshtein = 
-                   (1 - ws-levenshtein-distance / ws-longer-len) * 100
+                   (1 - ws-levenshtein-distance / ws-longer-len)
                
            exit.
 
@@ -216,29 +237,6 @@
 
            end-perform.
            exit.
-           
-           display-levenshtein-matrix.
-           PERFORM VARYING levenshtein-idx-i FROM 1 BY 1
-           UNTIL levenshtein-idx-i > ws-levenshtein-i-dim
-
-           PERFORM VARYING levenshtein-idx-j FROM 1 BY 1
-           UNTIL levenshtein-idx-j > ws-levenshtein-j-dim
-
-           IF levenshtein-idx-j > 1
-            DISPLAY ", " WITH NO ADVANCING
-           END-IF
-
-           DISPLAY levenshtein-value(levenshtein-idx-i,
-                   levenshtein-idx-j) WITH NO ADVANCING
-           END-PERFORM
-
-           DISPLAY " "
-           END-PERFORM
-
-           
-           exit.
-
-
            
            levenshtein-algorithm.
            
@@ -275,6 +273,7 @@
                move sanction-name of sanction-array(sanction-idx)
                to ws-string-j
            perform levenshtein-algorithm
+               move ws-relative-levenshtein to name-levenshtein
                *> Compare customer-name with aliases.
 
            perform varying alias-idx from 1 by 1
@@ -286,23 +285,54 @@
                move alias of sanction-array(sanction-idx, alias-idx)
                to ws-string-j
                perform levenshtein-algorithm
+               move ws-relative-levenshtein
+               to alias-levenshtein(alias-idx)
+           display "Levenshtein distance (alias :" alias-idx ")"
+                   alias-levenshtein(alias-idx)
+               
 
+               end-perform
+
+               *> Compare birthdates.
                move birthdate of customer
                to ws-string-i
                move birthdate-format of sanction-array(sanction-idx)
                to ws-string-j
-               display "comparing birthdays"
+               display "comparing birthdays.."
+               perform levenshtein-algorithm
+               move ws-relative-levenshtein
+               to birthdate-levenshtein
+           display "Levenshtein distance (birthdate)"
+                   birthdate-levenshtein
+
+               *> Compare countries.
+               move country-code of customer
+               to ws-string-i
+               move country-code of sanction-array(sanction-idx)
+               to ws-string-j
+               display "comparing countries..."
                display ws-string-i
                display ws-string-j
                perform levenshtein-algorithm
+               move ws-relative-levenshtein
+               to country-levenshtein
+           display "Levenshtein distance (country): "
+                   country-levenshtein
 
-           display "Levenshtein distance: " ws-levenshtein-distance
-           display "Relative levenshtein distance: "
-                    ws-relative-levenshtein "%."
-               end-perform
-               *> Compare birthdates.
 
                end-perform.
+
+               *> Each time a customer is compared with a sanctioned
+               *> person, we need to do the following:
+               *> save to a variable WS-NAME-MATCH the product of
+               *> the relative levenshtein match between names and
+               *> the weighing of that (both numbers between 0 and 1).
+               *> Do the same for each alias.
+               *> Do the same for birthdate.
+               *> Do the same for country.
+               *> Then, keeping in mind sanctioned person's alias count,
+               *> we sum the match to a number between 0 and 1.
+               *> And we display that.
            exit.
 
            loop-through-customers.
@@ -396,4 +426,44 @@
                ws-month-format delimited by size
                ws-year-format delimited by size
                into birthdate-format of sanction-array(sanction-idx).
+           exit.
+
+           calculate-match-percentage.
+           *> Re-initialize total-match.
+           move 0.00 to total-match.
+      *    Assuming levenshtein values have been saved regularly.
+           compute name-match = name-levenshtein * name-weight.
+           add name-match to total-match.
+
+           perform varying alias-idx from 1 by 1
+           until alias-idx greater than MAX-ALIAS
+           perform generate-alias-weight
+
+           compute alias-match (alias-idx) =
+            alias-levenshtein (alias-idx) * ws-alias-weight
+           *> Add to total match.
+            add alias-match (alias-idx) to total-match
+           
+
+           
+           end-perform.
+
+           
+           compute birthdate-match =
+           birthdate-levenshtein * birthdate-weight.
+           add birthdate-match to total-match.
+           
+           compute country-match =
+           country-levenshtein * name-weight.
+           add country-match to total-match.
+           
+           display total-match.
+
+      *    Final match variables
+           exit.
+           
+           generate-alias-weight.
+           compute ws-alias-weight = 1 /
+           alias-count of sanction-array(sanction-idx).
+
            exit.
