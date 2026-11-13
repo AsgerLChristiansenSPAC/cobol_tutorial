@@ -47,6 +47,7 @@
            indexed by sanction-idx.
            copy "data_copybooks/sanction.cpy".
            05 alias-count pic 9(2) value zeros.
+           05 birthdate-format pic X(6) value spaces.
 
       *     01 alias-statistics occurs SANCTION-ARRAY-SIZE times
       *     indexed by sanction-idx.
@@ -74,7 +75,11 @@
            01 char-idx-name-j pic 9(2) value zeros.
 
            01 ws-levenshtein-min-value pic 9(2) value zeros.
-
+           01 ws-year-full pic x(4) value spaces.
+           01 ws-year-format pic x(4) value spaces.
+           01 ws-month-format pic x(2) value spaces.
+           01 ws-day-format pic x(2) value spaces.
+           01 delimiter-char pic x(1) value '-'.
            
       * initialize levenshtein matrix.
 
@@ -87,6 +92,10 @@
 
        PROCEDURE DIVISION.
            perform load-all-sanctions.
+           display birthdate of sanction-array(1)
+           display birthdate-format of sanction-array(1)
+           display birthdate of sanction-array(2)
+           display birthdate-format of sanction-array(2)
            perform loop-through-customers.
            *> Initialize levenshtein matrix
 
@@ -251,11 +260,7 @@
                move levenshtein-value (ws-levenshtein-i-dim,
                                    ws-levenshtein-j-dim)
                to ws-levenshtein-distance.
-           display "Levenshtein distance: " ws-levenshtein-distance.
                 perform relative-levenshtein-match.
-           display "With longer string length " ws-longer-len
-                    ", relative levenshtein distance is: "
-                    ws-relative-levenshtein "%."
            exit.
 
            compare-with-sanctions.
@@ -269,11 +274,9 @@
                to ws-string-i
                move sanction-name of sanction-array(sanction-idx)
                to ws-string-j
-               display "Comparing names:"
-               display ws-string-i
-               display ws-string-j
            perform levenshtein-algorithm
-               display "Comparing aliases:"
+               *> Compare customer-name with aliases.
+
            perform varying alias-idx from 1 by 1
                until alias-idx greater than alias-count of 
                sanction-array(sanction-idx)
@@ -282,11 +285,22 @@
                to ws-string-i
                move alias of sanction-array(sanction-idx, alias-idx)
                to ws-string-j
-               display alias-idx
+               perform levenshtein-algorithm
+
+               move birthdate of customer
+               to ws-string-i
+               move birthdate-format of sanction-array(sanction-idx)
+               to ws-string-j
+               display "comparing birthdays"
                display ws-string-i
                display ws-string-j
                perform levenshtein-algorithm
+
+           display "Levenshtein distance: " ws-levenshtein-distance
+           display "Relative levenshtein distance: "
+                    ws-relative-levenshtein "%."
                end-perform
+               *> Compare birthdates.
 
                end-perform.
            exit.
@@ -359,9 +373,27 @@
            end-if
            
            end-perform
+
+           perform format-birthdate
            add 1 to sanction-idx
            END-READ
            end-perform.
 
               close input-sanction.
+           exit.
+
+           format-birthdate.
+           
+                 unstring birthdate of 
+                 sanction-array(sanction-idx)
+                 delimited by delimiter-char
+               into ws-year-full ws-month-format ws-day-format
+
+               move ws-year-full(3:2) to ws-year-format.
+
+               string 
+               ws-day-format delimited by size
+               ws-month-format delimited by size
+               ws-year-format delimited by size
+               into birthdate-format of sanction-array(sanction-idx).
            exit.
