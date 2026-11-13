@@ -234,14 +234,14 @@
            levenshtein-algorithm.
            
                   PERFORM calculate-length-i.
-               DISPLAY "Actual Length i : " ws-len-i.
+      *         DISPLAY "Actual Length i : " ws-len-i.
                PERFORM calculate-length-j.
-           DISPLAY "Actual Length j : " ws-len-j.
+      *     DISPLAY "Actual Length j : " ws-len-j.
                compute ws-levenshtein-i-dim = ws-len-i + 1.
                compute ws-levenshtein-j-dim = ws-len-j + 1.
-                display "Matrix dimensions: "
-               display "i : " ws-levenshtein-i-dim.
-               display "j : " ws-levenshtein-j-dim.
+      *          display "Matrix dimensions: "
+      *         display "i : " ws-levenshtein-i-dim.
+      *         display "j : " ws-levenshtein-j-dim.
 
            
 
@@ -272,7 +272,21 @@
                display "Comparing names:"
                display ws-string-i
                display ws-string-j
+           perform levenshtein-algorithm
+               display "Comparing aliases:"
+           perform varying alias-idx from 1 by 1
+               until alias-idx greater than alias-count of 
+               sanction-array(sanction-idx)
+
+               move customer-name of customer
+               to ws-string-i
+               move alias of sanction-array(sanction-idx, alias-idx)
+               to ws-string-j
+               display alias-idx
+               display ws-string-i
+               display ws-string-j
                perform levenshtein-algorithm
+               end-perform
 
                end-perform.
            exit.
