@@ -24,7 +24,7 @@
        
        Working-Storage Section.
       * Dummy variables for functions in development.
-      
+
       * End of file flags
            *> Sanctions eof
            
@@ -33,19 +33,25 @@
            pic x value "N".
            88 eof-sanction-reached value "Y".
       * Arrays
-
+           
+           01 alias-idx pic 9(2) value zeros.
            *> Sanctions array
-           78 SANCTION-ARRAY-SIZE value 201.
+           78 SANCTION-ARRAY-SIZE value 200.
            *> Set to 201 to combat a weird memory overflow error.
            01 sanction-array occurs SANCTION-ARRAY-SIZE times
            indexed by sanction-idx.
            copy "data_copybooks/sanction.cpy".
+           05 alias-count pic 9(2) value zeros.
+
+      *     01 alias-statistics occurs SANCTION-ARRAY-SIZE times
+      *     indexed by sanction-idx.
 
       *    Variable definition values.
            78 string-i-max value 40.
            78 levenshtein-i-dim value 41.
            78 string-j-max value 40.
            78 levenshtein-j-dim value 41.
+           78 max-alias value 5.
            
       * Working storage
            01 ws-len-i pic 9(4).
@@ -63,6 +69,7 @@
            01 char-idx-name-j pic 9(2) value zeros.
 
            01 ws-levenshtein-min-value pic 9(2) value zeros.
+
            
       * initialize levenshtein matrix.
 
@@ -75,7 +82,16 @@
 
        PROCEDURE DIVISION.
            perform load-all-sanctions.
-
+           display sanction-array(3).
+           display alias-count of sanction-array(3).
+           display alias-count of sanction-array(4).
+           display alias-count of sanction-array(5).
+           display alias-count of sanction-array(6).
+           display alias-count of sanction-array(7).
+           display sanction-array(45).
+           display alias-count of sanction-array(45).
+           display sanction-array(200).
+           display alias-count of sanction-array(200).
            *> Initialize levenshtein matrix
 
            move "John Smithson" to ws-string-i.
@@ -244,16 +260,17 @@
 
            *> So the next step: 
            
-           *> the architecture around it.
-           *> Loading the sanctions list.
            *> Looping through the customer ID.
+           *> For each customer:
+               *> Loop through the sanction array.
+               *> Load all aliases. Determine how many there are.
+               *> Compare name with each alias.
            *> Doing the levenshtein distance thingy a gajillion times
            *> per customer.
            *> Saving the scores.
 
            load-all-sanctions.
            *> Load all sanctions into sanction-array.
-
            open input input-sanction.
               display "Reading sanctions..."
            perform until eof-sanction-reached
@@ -261,11 +278,27 @@
            AT END
                set eof-sanction-reached to True
            NOT AT END
-           add 1 to sanction-idx
            *> Move sanction into sanction array
            move sanction 
            to sanction-array(sanction-idx)
 
+           perform varying alias-idx from 1 by 1 until alias-idx 
+           greater
+           than max-alias 
+           
+           move function trim(
+            alias of sanction-array(sanction-idx, alias-idx)) 
+           to alias of sanction-array(sanction-idx, alias-idx) 
+
+           if alias  of sanction-array (sanction-idx, alias-idx)
+           not equal "-"
+
+           add 1 to alias-count of sanction-array (sanction-idx)
+
+           end-if
+           
+           end-perform
+           add 1 to sanction-idx
            END-READ
            end-perform.
 
