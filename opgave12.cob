@@ -5,10 +5,11 @@
        Environment Division.
            input-output section.
                File-control.
-                 Select input-sanction assign to "SanctionList.txt"
+                 Select input-sanction assign to "SanctionListMini.txt"
                  Organization is line sequential.
 
-                 Select input-customer assign to "KundeOplysninger.txt"
+                 Select input-customer
+                 assign to "KundeOplysningerMini.txt"
                  Organization is line sequential.
 
        Data division.
@@ -32,11 +33,15 @@
            01   eof-sanction
            pic x value "N".
            88 eof-sanction-reached value "Y".
+
+           01   eof-customer
+           pic x value "N".
+           88 eof-customer-reached value "Y".
       * Arrays
            
            01 alias-idx pic 9(2) value zeros.
            *> Sanctions array
-           78 SANCTION-ARRAY-SIZE value 200.
+           78 SANCTION-ARRAY-SIZE value 5.
            *> Set to 201 to combat a weird memory overflow error.
            01 sanction-array occurs SANCTION-ARRAY-SIZE times
            indexed by sanction-idx.
@@ -82,51 +87,15 @@
 
        PROCEDURE DIVISION.
            perform load-all-sanctions.
-           display sanction-array(3).
-           display alias-count of sanction-array(3).
-           display alias-count of sanction-array(4).
-           display alias-count of sanction-array(5).
-           display alias-count of sanction-array(6).
-           display alias-count of sanction-array(7).
-           display sanction-array(45).
-           display alias-count of sanction-array(45).
-           display sanction-array(200).
-           display alias-count of sanction-array(200).
+           perform loop-through-customers.
            *> Initialize levenshtein matrix
-
-           move "John Smithson" to ws-string-i.
-           move "Smith Johnson" to ws-string-j.
-
-           PERFORM calculate-length-i.
-           DISPLAY "Actual Length i : " ws-len-i.
-           PERFORM calculate-length-j.
-           DISPLAY "Actual Length j : " ws-len-j.
-           compute ws-levenshtein-i-dim = ws-len-i + 1.
-           compute ws-levenshtein-j-dim = ws-len-j + 1.
-           display "Matrix dimensions: "
-           display "i : " ws-levenshtein-i-dim.
-           display "j : " ws-levenshtein-j-dim.
-
-           
-
-           perform calculate-longer-length.
-           perform init-levenshtein-matrix.
-           perform levenshtein-outer-loop.
-           perform display-levenshtein-matrix.
-           move levenshtein-value (ws-levenshtein-i-dim,
-                                   ws-levenshtein-j-dim)
-           to ws-levenshtein-distance.
-           display "Levenshtein distance: " ws-levenshtein-distance.
-           perform relative-levenshtein-match.
-           display "With longer string length " ws-longer-len
-                    ", relative levenshtein distance is: "
-                    ws-relative-levenshtein "%."
 
 
 
            stop run.
 
            calculate-length-i.
+           move 0 to ws-len-i.
            move function reverse(ws-string-i) to ws-string-i
            inspect ws-string-i tallying ws-len-i for leading spaces.
            subtract ws-len-i from 
@@ -136,6 +105,7 @@
            exit.
         
            calculate-length-j.
+           move 0 to ws-len-j.
            move function reverse(ws-string-j) to ws-string-j
            inspect ws-string-j tallying ws-len-j for leading spaces
            subtract ws-len-j 
@@ -255,19 +225,96 @@
 
            DISPLAY " "
            END-PERFORM
+
+           
            exit.
 
 
-           *> So the next step: 
            
-           *> Looping through the customer ID.
-           *> For each customer:
+           levenshtein-algorithm.
+           
+                  PERFORM calculate-length-i.
+               DISPLAY "Actual Length i : " ws-len-i.
+               PERFORM calculate-length-j.
+           DISPLAY "Actual Length j : " ws-len-j.
+               compute ws-levenshtein-i-dim = ws-len-i + 1.
+               compute ws-levenshtein-j-dim = ws-len-j + 1.
+                display "Matrix dimensions: "
+               display "i : " ws-levenshtein-i-dim.
+               display "j : " ws-levenshtein-j-dim.
+
+           
+
+               perform calculate-longer-length.
+               perform init-levenshtein-matrix.
+               perform levenshtein-outer-loop.
+               move levenshtein-value (ws-levenshtein-i-dim,
+                                   ws-levenshtein-j-dim)
+               to ws-levenshtein-distance.
+           display "Levenshtein distance: " ws-levenshtein-distance.
+                perform relative-levenshtein-match.
+           display "With longer string length " ws-longer-len
+                    ", relative levenshtein distance is: "
+                    ws-relative-levenshtein "%."
+           exit.
+
+           compare-with-sanctions.
+               *> For each sanctioned person (comparisons scale
+               *> very quickly!!)
+               perform varying sanction-idx from 1 by 1
+               until sanction-idx greater than SANCTION-ARRAY-SIZE
+               
+               *> Compare customer-name.
+               move customer-name of customer
+               to ws-string-i
+               move sanction-name of sanction-array(sanction-idx)
+               to ws-string-j
+               display "Comparing names:"
+               display ws-string-i
+               display ws-string-j
+               perform levenshtein-algorithm
+
+               end-perform.
+           exit.
+
+           loop-through-customers.
+
+           open input input-customer.
+              display "Reading customers..."
+           perform until eof-customer-reached
+           read input-customer into customer
+           AT END
+               set eof-customer-reached to True
+           NOT AT END
+           perform compare-with-sanctions
+
+           END-READ
+           end-perform.
+           close input-customer.
+           exit.
                *> Loop through the sanction array.
-               *> Load all aliases. Determine how many there are.
+               
+               *> Compare name with name.
+               *> Extract absolute levenshtein score.
+               *> Compute relative levenshtein score.
+               *> Display if fishy.
+
                *> Compare name with each alias.
-           *> Doing the levenshtein distance thingy a gajillion times
-           *> per customer.
-           *> Saving the scores.
+               *> Repeat steps taken above
+
+               *> Compare birthdate with birthdate.
+               *> Repeat steps taken above
+
+               *> Simply check if country is equal.
+               *> Display if fishy.
+
+           
+               *> MVP solution: If there is anything fishy, display it.
+               
+               *> What data structures do we need?
+               *> Basically... none? Let's try coding it display-
+               *> oriented.
+
 
            load-all-sanctions.
            *> Load all sanctions into sanction-array.
