@@ -342,29 +342,36 @@
                if total-match > 0.70
                display "Suspicious person detected."
                move customer to report-line
-               write sanction-report
+      *         write sanction-report
+               perform CLEAN-WRITE
                move sanction-array(sanction-idx) to report-line
-               write sanction-report
+      *         write sanction-report
+               perform CLEAN-WRITE
                move "Best matching alias: " to report-line
                
-               write sanction-report
+      *         write sanction-report
+               perform CLEAN-WRITE
                move alias of sanction-array(sanction-idx,
                                    ws-best-alias-idx)
                to report-line
-               write sanction-report
+      *         write sanction-report
+               perform CLEAN-WRITE
                move ws-best-alias-match to ws-decimal-display
                move ws-decimal-display
                to report-line
 
-               write sanction-report
+      *         write sanction-report
+               perform CLEAN-WRITE
                move "Total match:"
                to report-line
-               write sanction-report
+      *         write sanction-report
+               perform CLEAN-WRITE
 
                move total-match to ws-decimal-display
                move ws-decimal-display
                to report-line
-               write sanction-report
+      *         write sanction-report
+               perform CLEAN-WRITE
                end-if
                end-perform.
 
@@ -489,7 +496,7 @@
 
 
            
-             CLEAN_ROW.
+             CLEAN-ROW.
              MOVE 1 TO IDX-clean
              MOVE 1 TO IDX-OUT.
              MOVE SPACES TO CURRENT-CHAR.
@@ -509,4 +516,10 @@
              MOVE report-line-CLEAN TO report-line
              MOVE SPACES TO report-line-CLEAN
              EXIT.
-           
+
+             
+           CLEAN-WRITE.
+           PERFORM CLEAN-ROW.
+           write sanction-report.
+           perform new-line.
+           exit.
