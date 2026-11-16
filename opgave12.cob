@@ -46,6 +46,8 @@
            01 ws-best-alias-idx pic 9(2) value zeros.
 
            01 ws-decimal-display pic 9.99.
+           01 ws-decimal-display-2 pic 9.99.
+           01 ws-decimal-display-3 pic 9.99.
       * end of file flags
            *> Sanctions eof
            
@@ -96,6 +98,7 @@
       * Weights
            01 weights.
            05 name-weight pic 9(1)v99 value 0.25.
+           05 raw-alias-weight pic 9(1)v99 value 0.25.
            05 ws-alias-weight pic 9(1)v99 value 0.05.
            05 birthdate-weight pic 9(1)v99 value 0.30.
            05 country-weight pic 9(1)v99 value 0.20.
@@ -151,7 +154,6 @@
 
 
            close output-sanction.
-           display "what"
            stop run.
 
            calculate-length-i.
@@ -290,7 +292,7 @@
                *> For each sanctioned person (comparisons scale
                *> very quickly!!)
            perform varying sanction-idx from 1 by 1
-               until sanction-idx greater than SanCtiOn-array-SiZe
+               until sanction-idx greater than SANCTION-ARRAY-SIZE
                
                *> Compare customer-name.
                move customer-name of customer
@@ -299,11 +301,14 @@
                to ws-string-j
                perform levenshtein-algorithm
                move ws-relative-levenshtein to name-levenshtein
+
+
                *> Compare customer-name with aliases.
            
                *> re-initialize best match
                move 0 to ws-best-alias-idx
                move 0.00 to ws-best-alias-match
+
                *> Loop through aliases
                perform varying alias-idx from 1 by 1
                until alias-idx greater than alias-count of 
@@ -351,21 +356,13 @@
                perform calculate-match-percentage
 
                if total-match > 0.20
-               display "Suspicious person detected."
-               display "Ws alias weight:"
-               display ws-alias-weight
-               display alias-count of sanction-array (sanction-idx)
-               display "results:"
-               display name-match
-               display alias-match(1)
-               display alias-match(2)
-               display alias-match(3)
-               display alias-match(4)
-               display alias-match(5)
-               display birthdate-match
-               display country-match
-               display "Total match:"
-               display total-match
+       *>        display "Suspicious person detected."
+       *>        display alias-count of sanction-array (sanction-idx)
+       *>        display "results:"
+       *>        display birthdate-match
+       *>        display country-match
+       *>        display "Total match:"
+       *>        display total-match
                perform write-report-entry
        
                end-if
@@ -452,9 +449,6 @@
            *> Re-initialize "relevant aliases" count here.
            move 0 to ws-relevant-alias-count
 
-      *    assuming levenshtein values have been saved regularly.
-           compute name-match = name-levenshtein * name-weight.
-           add name-match to total-match.
 
        *> Wrangling RELEVANT aliases:
            perform varying alias-idx from 1 by 1
@@ -504,6 +498,22 @@
                    add alias-match of relevant-aliases (alias-idx) 
                    to total-match
            end-perform.
+           
+           
+      *    Were there any relevant alias matches?
+           if ws-relevant-alias-count > 0
+           move 0.25 to name-weight
+
+           compute name-match = name-levenshtein * name-weight
+           add name-match to total-match
+
+           else
+           *> If no relevant aliases, name accounts for 50% of weight.
+           move 0.5 to name-weight
+           compute name-match = name-levenshtein * name-weight
+           add name-match to total-match
+
+           end-if
 
            compute birthdate-match =
            birthdate-levenshtein * birthdate-weight.
@@ -518,7 +528,7 @@
            exit.
            
            generate-alias-weight.
-           compute ws-alias-weight = 1 /
+           compute ws-alias-weight = raw-alias-weight * 1 /
            ws-relevant-alias-count
 
            exit.
@@ -664,11 +674,25 @@
            
            move "Match-beskrivelse:" to report-line
            perform clean-write
+
            
-           move name-match to ws-decimal-display
-           string "- Match på navn: " delimited by size
+           move "Kategori - Uvægtet Match - Vægt - Vægtet Match"
+           to report-line
+           perform clean-write
+
+           move name-levenshtein to ws-decimal-display
+           move name-weight to ws-decimal-display-2
+           move name-match to ws-decimal-display-3
+           string "- Navn: " delimited by size
            ws-decimal-display delimited by size
-           "% (" delimited by size
+           "% " delimited by size
+           "- " delimited by size
+           ws-decimal-display-2 delimited by size
+           "% " delimited by size
+           "- " delimited by size 
+           ws-decimal-display-3 delimited by size
+           "% " delimited by size           
+           "(" delimited by size
            customer-name delimited by size
            " og " delimited by size
            sanction-name of sanction-array (sanction-idx)
@@ -680,15 +704,26 @@
            perform varying alias-idx from 1 by 1 until
            alias-idx greater than ws-relevant-alias-count
 
-           move alias-match of relevant-aliases (alias-idx)
+           
+           move alias-levenshtein of relevant-aliases (alias-idx)
             to ws-decimal-display
-           string "- Match på alias (" delimited by size
+           move ws-alias-weight to ws-decimal-display-2
+           move alias-match of relevant-aliases (alias-idx)
+            to ws-decimal-display-3
+           string "- Alias (" delimited by size
            alias-nr of relevant-aliases (alias-idx)
            delimited by size
            "): " 
            delimited by size
            ws-decimal-display delimited by size
-           "% (" delimited by size
+           "% " delimited by size
+           "- " delimited by size
+           ws-decimal-display-2 delimited by size
+           "% " delimited by size
+           "- " delimited by size 
+           ws-decimal-display-3 delimited by size
+           "% " delimited by size           
+           "(" delimited by size
             customer-name  delimited by size
            " og " delimited by size
            alias of relevant-aliases (alias-idx) delimited by size
@@ -700,19 +735,46 @@
 
            perform clean-write
            end-perform
-
-           move birthdate-match to ws-decimal-display
-           string "- Match på fødselsdato: " delimited by size
+           move birthdate-levenshtein to ws-decimal-display
+           move birthdate-weight to ws-decimal-display-2
+           move birthdate-match to ws-decimal-display-3
+           string "- Fødselsdato: " delimited by size
            ws-decimal-display delimited by size
-           "%" delimited by size
+           "% " delimited by size
+           "- " delimited by size
+           ws-decimal-display-2 delimited by size
+           "% " delimited by size
+           "- " delimited by size 
+           ws-decimal-display-3 delimited by size
+           "% " delimited by size         
+           "(" delimited by size
+            birthdate of customer  delimited by size
+           " og " delimited by size
+           birthdate-format of sanction-array (sanction-idx)
+            delimited by size
+           ")" delimited by size
            into ws-report-line
            move ws-report-line to report-line
            perform clean-write
            
-           move country-match to ws-decimal-display
-           string "- Match på land: " delimited by size
+           move country-levenshtein to ws-decimal-display
+           move country-weight to ws-decimal-display-2
+           move country-match to ws-decimal-display-3
+           string "- Land: " delimited by size
            ws-decimal-display delimited by size
-           "%" delimited by size
+           "% " delimited by size
+           "- " delimited by size
+           ws-decimal-display-2 delimited by size
+           "% " delimited by size
+           "- " delimited by size 
+           ws-decimal-display-3 delimited by size
+           "% " delimited by size         
+           "(" delimited by size
+            country-code of customer  delimited by size
+           " og " delimited by size
+           country-code of sanction-array (sanction-idx)
+            delimited by size
+           ")" delimited by size
            into ws-report-line
            move ws-report-line to report-line
            perform clean-write
