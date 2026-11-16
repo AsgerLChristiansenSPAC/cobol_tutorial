@@ -1,11 +1,11 @@
-       Identification Division.
-       Program-Id. Opgave12.
+       identification division.
+       Program-id. Opgave12.
        
 
-       Environment Division.
+       environment division.
            input-output section.
                File-control.
-                 Select input-sanction assign to "SanctionList.txt"
+                 Select input-sanction assign to "Sanctionlist.txt"
                  Organization is line sequential.
 
                  Select input-customer
@@ -13,12 +13,12 @@
                  Organization is line sequential.
 
                  
-                 SELECT output-sanction
-                  ASSIGN TO 
+                 Select output-sanction
+                  assign to 
                    "SanktionsRapport.txt"
-                 ORGANIZATION IS LINE SEQUENTIAL.
+                 OrganizatiOn is line Sequential.
 
-       Data division.
+       data division.
       
            File Section.
                   Fd input-sanction.
@@ -29,75 +29,84 @@
                   01 customer.
                   Copy "data_copybooks/customer.cpy".
 
-                  FD output-sanction.
+                  Fd output-sanction.
                   01 sanction-report.
-                  05 report-line PIC X(150)   VALUE SPACES.
+                  05 report-line pic x(150)   value spaces.
        
        Working-Storage Section.
-      * Dummy variables for functions in development.
+      * dummy variables for functions in development.
 
-                  01 report-line-CLEAN PIC X(150) VALUE SPACES.
+                  01 report-line-clean pic x(150) value spaces.
                   01 idx-clean pic 9(3) value zeros.
                   01 idx-out pic 9(3) value zeros.
                   01 current-char pic x(1) value spaces.
                   01 previous-char pic x(1) value spaces.
       * Best alias variables.
-           01 ws-best-alias-match pic 9(1)V99.
+           01 ws-best-alias-match pic 9(1)v99.
            01 ws-best-alias-idx pic 9(2) value zeros.
 
            01 ws-decimal-display pic 9.99.
-      * End of file flags
+      * end of file flags
            *> Sanctions eof
            
            
            01   eof-sanction
-           pic x value "N".
-           88 eof-sanction-reached value "Y".
+           pic x value "n".
+           88 eof-sanction-reached value "y".
 
            01   eof-customer
-           pic x value "N".
-           88 eof-customer-reached value "Y".
-      * Arrays
+           pic x value "n".
+           88 eof-customer-reached value "y".
+      *    variable definition values.
+           78 string-i-max value 40.
+           78 levenshtein-i-dim value 41.
+           78 string-j-max value 40.
+           78 levenshtein-j-dim value 41.
+           78 MAX-ALIAS value 5.
+           78 SANCTION-ARRAY-SIZE value 200.
+      * arrays
            
            01 alias-idx pic 9(2) value zeros.
            *> Sanctions array
-           78 SANCTION-ARRAY-SIZE value 200.
            *> Set to 201 to combat a weird memory overflow error.
            01 sanction-array occurs SANCTION-ARRAY-SIZE times
            indexed by sanction-idx.
            copy "data_copybooks/sanction.cpy".
            05 alias-count pic 9(2) value zeros.
-           05 birthdate-format pic X(6) value spaces.
+           05 birthdate-format pic x(6) value spaces.
 
 
-      *    Variable definition values.
-           78 string-i-max value 40.
-           78 levenshtein-i-dim value 41.
-           78 string-j-max value 40.
-           78 levenshtein-j-dim value 41.
-           78 max-alias value 5.
+           
+
+           01 relevant-aliases occurs MAX-ALIAS times.
+           05 alias pic x(20) value spaces.
+           05 alias-levenshtein pic 9(1)v99 value zeros.
+           05 alias-match pic 9(1)v99 value zeros.
+           05 alias-nr pic 9(1) value 0.
+           
+           01 ws-relevant-alias-count pic 9(1) value 0.
       
-      *    Relative levenshtein
+      *    relative levenshtein
            01 levenshtein-info.
-           05 name-levenshtein pic 9(1)V99.
-           05 aliases occurs MAX-ALIAS times.
-           10 alias-levenshtein pic 9(1)V99.
-           05 birthdate-levenshtein pic 9(1)V99.
-           05 country-levenshtein pic 9(1)V99.
+           05 name-levenshtein pic 9(1)v99.
+           05 aliases occurs Max-aliaS times.
+           10 alias-levenshtein pic 9(1)v99.
+           05 birthdate-levenshtein pic 9(1)v99.
+           05 country-levenshtein pic 9(1)v99.
       * Weights
            01 weights.
-           05 name-weight pic 9(1)V99 value 0.25.
-           05 ws-alias-weight pic 9(1)V99 value 0.05.
-           05 birthdate-weight pic 9(1)V99 value 0.30.
-           05 country-weight pic 9(1)V99 value 0.20.
+           05 name-weight pic 9(1)v99 value 0.25.
+           05 ws-alias-weight pic 9(1)v99 value 0.05.
+           05 birthdate-weight pic 9(1)v99 value 0.30.
+           05 country-weight pic 9(1)v99 value 0.20.
       *    Final match variables
            01 match-info.
-           05 name-match pic 9(1)V99.
-           05 alias-matches occurs MAX-ALIAS times.
-           10 alias-match pic 9(1)V99.
-           05 birthdate-match pic 9(1)V99.
-           05 country-match pic 9(1)V99.
-           05 total-match pic 9(1)V99.
+           05 name-match pic 9(1)v99.
+           05 birthdate-match pic 9(1)v99.
+           05 country-match pic 9(1)v99.
+           05 total-match pic 9(1)v99.
+      *>     05 alias-matches occurs Max-aliaS times.
+      *>     10 alias-match pic 9(1)v99.
 
 
       * Working storage
@@ -107,7 +116,7 @@
            01 ws-levenshtein-j-dim pic 9(4).
            01 ws-longer-len pic 9(4).
            01 ws-levenshtein-distance pic 9(4).
-           01 ws-relative-levenshtein pic 9(1)V99.
+           01 ws-relative-levenshtein pic 9(1)v99.
       
            01 ws-string-i pic x(string-i-max) value spaces.
            01 ws-string-j pic x(string-j-max) value spaces.
@@ -131,16 +140,18 @@
               times indexed by levenshtein-idx-j.
                        15 levenshtein-value pic 9(2) value zeros.
 
-       PROCEDURE DIVISION.
-       
-           OPEN OUTPUT output-sanction.
+           01 ws-report-line pic x(150) value spaces.
+
+       Procedure Division.
+           open output output-sanction.
            perform load-all-sanctions.
            perform loop-through-customers.
-           *> Initialize levenshtein matrix
+           *> initialize levenshtein matrix
 
 
 
-           CLOSE output-sanction.
+           close output-sanction.
+           display "what"
            stop run.
 
            calculate-length-i.
@@ -149,7 +160,7 @@
            inspect ws-string-i tallying ws-len-i for leading spaces.
            subtract ws-len-i from 
            function length (ws-string-i) giving ws-len-i.
-        *> Re-initialize ws-string-i.
+        *> re-initialize ws-string-i.
            move function reverse(ws-string-i) to ws-string-i
            exit.
         
@@ -159,14 +170,14 @@
            inspect ws-string-j tallying ws-len-j for leading spaces
            subtract ws-len-j 
            from function length (ws-string-j) giving ws-len-j
-        *> Re-initialize ws-string-j.
+        *> re-initialize ws-string-j.
            move function reverse(ws-string-j) to ws-string-j
            
            exit.
 
            calculate-longer-length.
            
-           *> Move longer string length to working storage
+           *> move longer string length to working storage
            if ws-len-i greater than ws-len-j
                move ws-len-i to ws-longer-len
            end-if
@@ -200,7 +211,7 @@
            
            if ws-string-i(char-idx-name-i: 1)
            equal ws-string-j(char-idx-name-j: 1)
-           *> If letters equal.
+           *> if letters equal.
            move
            levenshtein-value (levenshtein-idx-i - 1, 
                                levenshtein-idx-j - 1)
@@ -238,7 +249,7 @@
            exit.
 
            init-levenshtein-matrix.
-           *> Initialize first row and column of levenshtein-matrix.
+           *> initialize first row and column of levenshtein-matrix.
            
 
            perform varying levenshtein-idx-i from 0 by 1 until 
@@ -259,8 +270,8 @@
            
            levenshtein-algorithm.
            
-                  PERFORM calculate-length-i.
-               PERFORM calculate-length-j.
+                  perform calculate-length-i.
+               perform calculate-length-j.
                compute ws-levenshtein-i-dim = ws-len-i + 1.
                compute ws-levenshtein-j-dim = ws-len-j + 1.
 
@@ -278,22 +289,23 @@
            compare-with-sanctions.
                *> For each sanctioned person (comparisons scale
                *> very quickly!!)
-               perform varying sanction-idx from 1 by 1
-               until sanction-idx greater than SANCTION-ARRAY-SIZE
+           perform varying sanction-idx from 1 by 1
+               until sanction-idx greater than SanCtiOn-array-SiZe
                
                *> Compare customer-name.
                move customer-name of customer
                to ws-string-i
                move sanction-name of sanction-array(sanction-idx)
                to ws-string-j
-           perform levenshtein-algorithm
+               perform levenshtein-algorithm
                move ws-relative-levenshtein to name-levenshtein
                *> Compare customer-name with aliases.
            
                *> re-initialize best match
                move 0 to ws-best-alias-idx
                move 0.00 to ws-best-alias-match
-           perform varying alias-idx from 1 by 1
+               *> Loop through aliases
+               perform varying alias-idx from 1 by 1
                until alias-idx greater than alias-count of 
                sanction-array(sanction-idx)
 
@@ -303,13 +315,13 @@
                to ws-string-j
                perform levenshtein-algorithm
                move ws-relative-levenshtein
-               to alias-levenshtein(alias-idx)
+               to alias-levenshtein of levenshtein-info(alias-idx)
 
-               if alias-levenshtein(alias-idx)
+               if alias-levenshtein of levenshtein-info(alias-idx)
                greater than
                ws-best-alias-match
 
-               move alias-levenshtein(alias-idx)
+               move alias-levenshtein of levenshtein-info(alias-idx)
                to ws-best-alias-match
 
                move alias-idx to ws-best-alias-idx
@@ -336,76 +348,60 @@
                perform levenshtein-algorithm
                move ws-relative-levenshtein
                to country-levenshtein
-           
-           perform calculate-match-percentage
+               perform calculate-match-percentage
 
-               if total-match > 0.70
+               if total-match > 0.20
                display "Suspicious person detected."
-               move customer to report-line
-      *         write sanction-report
-               perform CLEAN-WRITE
-               move sanction-array(sanction-idx) to report-line
-      *         write sanction-report
-               perform CLEAN-WRITE
-               move "Best matching alias: " to report-line
-               
-      *         write sanction-report
-               perform CLEAN-WRITE
-               move alias of sanction-array(sanction-idx,
-                                   ws-best-alias-idx)
-               to report-line
-      *         write sanction-report
-               perform CLEAN-WRITE
-               move ws-best-alias-match to ws-decimal-display
-               move ws-decimal-display
-               to report-line
-
-      *         write sanction-report
-               perform CLEAN-WRITE
-               move "Total match:"
-               to report-line
-      *         write sanction-report
-               perform CLEAN-WRITE
-
-               move total-match to ws-decimal-display
-               move ws-decimal-display
-               to report-line
-      *         write sanction-report
-               perform CLEAN-WRITE
+               display "Ws alias weight:"
+               display ws-alias-weight
+               display alias-count of sanction-array (sanction-idx)
+               display "results:"
+               display name-match
+               display alias-match(1)
+               display alias-match(2)
+               display alias-match(3)
+               display alias-match(4)
+               display alias-match(5)
+               display birthdate-match
+               display country-match
+               display "Total match:"
+               display total-match
+               perform write-report-entry
+       
                end-if
-               end-perform.
+           end-perform.
 
-               *> Remaining to-do.
-               *> Display idx of highest matching alias.
+               *> remaining to-do.
+               *> display idx of highest matching alias.
            exit.
 
            loop-through-customers.
 
            open input input-customer.
-              display "Reading customers..."
+              display "reading customers..."
            perform until eof-customer-reached
            read input-customer into customer
-           AT END
-               set eof-customer-reached to True
-           NOT AT END
+           at end
+               set eof-customer-reached to true
+           not at end
            perform compare-with-sanctions
 
-           END-READ
+           end-read
            end-perform.
            close input-customer.
            exit.
 
 
            load-all-sanctions.
-           *> Load all sanctions into sanction-array.
+           *> load all sanctions into sanction-array.
            open input input-sanction.
-              display "Reading sanctions..."
+              display "reading sanctions..."
            perform until eof-sanction-reached
            read input-sanction into sanction
-           AT END
-               set eof-sanction-reached to True
-           NOT AT END
-           *> Move sanction into sanction array
+           at end
+               set eof-sanction-reached to true
+           not at end
+           *> move sanction into sanction array
            move sanction 
            to sanction-array(sanction-idx)
 
@@ -428,7 +424,7 @@
 
            perform format-birthdate
            add 1 to sanction-idx
-           END-READ
+           end-read
            end-perform.
 
               close input-sanction.
@@ -451,26 +447,64 @@
            exit.
 
            calculate-match-percentage.
-           *> Re-initialize total-match.
+           *> re-initialize total-match.
            move 0.00 to total-match.
-      *    Assuming levenshtein values have been saved regularly.
+           *> Re-initialize "relevant aliases" count here.
+           move 0 to ws-relevant-alias-count
+
+      *    assuming levenshtein values have been saved regularly.
            compute name-match = name-levenshtein * name-weight.
            add name-match to total-match.
 
+       *> Wrangling RELEVANT aliases:
            perform varying alias-idx from 1 by 1
-           until alias-idx greater than MAX-ALIAS
+           until alias-idx greater than
+           alias-count of sanction-array(sanction-idx)
+
+           if alias-levenshtein of levenshtein-info (alias-idx) > 0.1
+               *> Increment relevant-alias count
+               add 1 to ws-relevant-alias-count
+               *> Which alias is it?
+               move alias-idx
+               to alias-nr
+               of relevant-aliases (ws-relevant-alias-count)
+
+               move alias of sanction-array (sanction-idx, alias-idx)
+               to alias
+               of relevant-aliases (ws-relevant-alias-count)
+
+
+               *> What is the unweighted score?
+               move alias-levenshtein of levenshtein-info (alias-idx)
+               to alias-levenshtein
+               of relevant-aliases (ws-relevant-alias-count)
+
+
+           end-if
+
+           
+
+           end-perform.
+           *> Loop through RELEVANT aliases.
+           perform varying alias-idx from 1 by 1
+           until alias-idx greater than
+           ws-relevant-alias-count
+           *> Based on relevant alias count, generate weight.
            perform generate-alias-weight
-
-           compute alias-match (alias-idx) =
-            alias-levenshtein (alias-idx) * ws-alias-weight
-           *> Add to total match.
-            add alias-match (alias-idx) to total-match
+           display alias-nr of relevant-aliases(alias-idx)
+           display alias of relevant-aliases(alias-idx)
+           display alias-levenshtein of relevant-aliases(alias-idx)
+           display alias-match of relevant-aliases(alias-idx)
            
-
-           
+            compute alias-match  of relevant-aliases (alias-idx) =
+            alias-levenshtein  of relevant-aliases (alias-idx)
+             * ws-alias-weight
+                  *> add to total match.
+                  
+                   add alias-match of relevant-aliases (alias-idx) 
+                   to total-match
            end-perform.
 
-           
            compute birthdate-match =
            birthdate-levenshtein * birthdate-weight.
            add birthdate-match to total-match.
@@ -485,41 +519,210 @@
            
            generate-alias-weight.
            compute ws-alias-weight = 1 /
-           alias-count of sanction-array(sanction-idx).
+           ws-relevant-alias-count
 
            exit.
            
            new-line.
-           MOVE SPACES TO report-line.
-           WRITE report-line.
-           EXIT.
+           move spaces to report-line.
+           write report-line.
+           exit.
 
 
            
-             CLEAN-ROW.
-             MOVE 1 TO IDX-clean
-             MOVE 1 TO IDX-OUT.
-             MOVE SPACES TO CURRENT-CHAR.
-             MOVE SPACES TO PREVIOUS-CHAR.
-             PERFORM VARYING idx-clean FROM 1 BY 1 UNTIL
-             idx-clean > LENGTH OF report-line
+             clean-row.
+             move 1 to idx-clean
+             move 1 to idx-out.
+             move spaces to current-char.
+             move spaces to previous-char.
+             perform varying idx-clean FrOM 1 By 1 Until
+             idx-clean > length OF report-line
       * Update current char
-             MOVE report-line(IDX-clean:1) TO CURRENT-CHAR
-      * Evaluate current char and previous char
-             IF CURRENT-CHAR NOT = SPACE OR PREVIOUS-CHAR NOT = SPACE
-                    MOVE CURRENT-CHAR TO report-line-CLEAN(IDX-OUT:1)
-             ADD 1 TO IDX-OUT
-             END-IF
-             MOVE CURRENT-CHAR TO PREVIOUS-CHAR
-             END-PERFORM.
-             MOVE SPACES TO report-line
-             MOVE report-line-CLEAN TO report-line
-             MOVE SPACES TO report-line-CLEAN
-             EXIT.
+             move report-line(idx-clean:1) to current-char
+      * evaluate current char and previous char
+             iF current-char not = space Or previous-char not = space
+                    move current-char to report-line-clean(idx-out:1)
+             add 1 to idx-out
+             end-iF
+             move current-char to previous-char
+             end-perform.
+             move spaces to report-line
+             move report-line-clean to report-line
+             move spaces to report-line-clean
+             exit.
 
              
-           CLEAN-WRITE.
-           PERFORM CLEAN-ROW.
+           clean-write.
+           perform clean-row.
            write sanction-report.
-           perform new-line.
+           move spaces to ws-report-line.
+           move spaces to report-line.
            exit.
+           
+
+
+           write-report-entry.
+
+       
+           perform write-report-boundary
+           perform write-customer-info
+           
+           perform new-line
+           
+           perform write-sanction-info
+           perform new-line
+           perform write-match-description
+           perform write-report-boundary
+           perform new-line
+
+           exit.
+
+           write-report-boundary.
+           string "-------------------------" delimited by size
+           "---------------------------------" delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           exit.
+
+
+           write-customer-info.
+           
+           string "Kunde-ID. " delimited by size
+           cpr-nr of customer delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           
+           string "Kundenavn: " delimited by size
+           customer-name of customer delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           
+           string "Fødselsdato: " delimited by size
+           birthdate of customer delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           
+           string "Adresse: " delimited by size
+           adress delimited by size
+           ", " delimited by size
+           country-code of customer delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           perform new-line
+           exit.
+
+           write-sanction-info.
+
+           move "Match fundet med:" to report-line
+           perform clean-write
+           
+           string "Sanction-ID: " delimited by size
+           sanction-id of
+           sanction-array (sanction-idx) delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           
+           string "Navn: " delimited by size
+           sanction-name of 
+           sanction-array (sanction-idx) delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           
+           string "Best matchende alias: " delimited by size
+           alias of sanction-array(sanction-idx,
+                                   ws-best-alias-idx)
+           delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+
+           string "Fødselsdato: " delimited by size
+           birthdate-format of
+            sanction-array (sanction-idx) delimited by size
+              into ws-report-line
+           move ws-report-line to report-line
+              perform clean-write
+       
+           string "Land: " delimited by size
+           country-code 
+           of sanction-array (sanction-idx) delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           perform new-line
+           exit.
+
+           write-match-description.
+           
+           
+           move "Match-beskrivelse:" to report-line
+           perform clean-write
+           
+           move name-match to ws-decimal-display
+           string "- Match på navn: " delimited by size
+           ws-decimal-display delimited by size
+           "% (" delimited by size
+           customer-name delimited by size
+           " og " delimited by size
+           sanction-name of sanction-array (sanction-idx)
+            delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           
+           perform varying alias-idx from 1 by 1 until
+           alias-idx greater than ws-relevant-alias-count
+
+           move alias-match of relevant-aliases (alias-idx)
+            to ws-decimal-display
+           string "- Match på alias (" delimited by size
+           alias-nr of relevant-aliases (alias-idx)
+           delimited by size
+           "): " 
+           delimited by size
+           ws-decimal-display delimited by size
+           "% (" delimited by size
+            customer-name  delimited by size
+           " og " delimited by size
+           alias of relevant-aliases (alias-idx) delimited by size
+           ")" delimited by size
+           into ws-report-line
+
+
+           move ws-report-line to report-line
+
+           perform clean-write
+           end-perform
+
+           move birthdate-match to ws-decimal-display
+           string "- Match på fødselsdato: " delimited by size
+           ws-decimal-display delimited by size
+           "%" delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           
+           move country-match to ws-decimal-display
+           string "- Match på land: " delimited by size
+           ws-decimal-display delimited by size
+           "%" delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           
+           move total-match to ws-decimal-display
+           string "Samlet match-procent: " delimited by size
+            ws-decimal-display delimited by size
+           "%" delimited by size
+           into ws-report-line
+           move ws-report-line to report-line
+           perform clean-write
+           exit.
+
