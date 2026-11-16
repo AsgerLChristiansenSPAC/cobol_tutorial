@@ -5,11 +5,11 @@
        environment division.
            input-output section.
                File-control.
-                 Select input-sanction assign to "Sanctionlist.txt"
+                 Select input-sanction assign to "SanctionList.txt"
                  Organization is line sequential.
 
                  Select input-customer
-                 assign to "KundeOplysningerMini.txt"
+                 assign to "KundeOplysninger.txt"
                  Organization is line sequential.
 
                  
@@ -355,7 +355,7 @@
                to country-levenshtein
                perform calculate-match-percentage
 
-               if total-match > 0.20
+               if total-match > 0.50
        *>        display "Suspicious person detected."
        *>        display alias-count of sanction-array (sanction-idx)
        *>        display "results:"
@@ -368,8 +368,6 @@
                end-if
            end-perform.
 
-               *> remaining to-do.
-               *> display idx of highest matching alias.
            exit.
 
            loop-through-customers.
@@ -455,7 +453,7 @@
            until alias-idx greater than
            alias-count of sanction-array(sanction-idx)
 
-           if alias-levenshtein of levenshtein-info (alias-idx) > 0.1
+           if alias-levenshtein of levenshtein-info (alias-idx) > 0.5
                *> Increment relevant-alias count
                add 1 to ws-relevant-alias-count
                *> Which alias is it?
@@ -485,10 +483,6 @@
            ws-relevant-alias-count
            *> Based on relevant alias count, generate weight.
            perform generate-alias-weight
-           display alias-nr of relevant-aliases(alias-idx)
-           display alias of relevant-aliases(alias-idx)
-           display alias-levenshtein of relevant-aliases(alias-idx)
-           display alias-match of relevant-aliases(alias-idx)
            
             compute alias-match  of relevant-aliases (alias-idx) =
             alias-levenshtein  of relevant-aliases (alias-idx)
@@ -520,7 +514,7 @@
            add birthdate-match to total-match.
            
            compute country-match =
-           country-levenshtein * name-weight.
+           country-levenshtein * country-weight.
            add country-match to total-match.
            
 
@@ -535,7 +529,7 @@
            
            new-line.
            move spaces to report-line.
-           write report-line.
+           write sanction-report.
            exit.
 
 
@@ -645,13 +639,13 @@
            move ws-report-line to report-line
            perform clean-write
            
-           string "Best matchende alias: " delimited by size
-           alias of sanction-array(sanction-idx,
-                                   ws-best-alias-idx)
-           delimited by size
-           into ws-report-line
-           move ws-report-line to report-line
-           perform clean-write
+       *>    string "Best matchende alias: " delimited by size
+       *>    alias of sanction-array(sanction-idx,
+       *>                            ws-best-alias-idx)
+       *>    delimited by size
+       *>    into ws-report-line
+       *>    move ws-report-line to report-line
+       *>    perform clean-write
 
            string "Fødselsdato: " delimited by size
            birthdate-format of
